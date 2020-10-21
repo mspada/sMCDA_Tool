@@ -124,10 +124,9 @@ server <- function(input, output, session){
   crit <- reactive({
     data() %>% select(!!!input$variables)
   })
-  
-  # critnames <- reactive({
-  #   names(data() %>% select(!!!input$variables))
-  # })
+  # 
+  # numSliders <- reactive(dim(crit())[2])
+  critnames <- reactive(names(crit()))
   
   alt <- reactive({
     data() %>% select(1)
@@ -138,30 +137,40 @@ server <- function(input, output, session){
     })
  
   output$sliders <- renderUI({
-    
-    critnames <- names(crit())
-    numSliders <- dim(crit())[2]
-    lapply(1:numSliders, function(i) {
+     sliders <- lapply(1:numSliders(), function(i) {
       sliderInput(
-        paste0('Criteria', critnames[i]),
-        paste0('Select the Weight (%) for ', critnames[i]),
+        critnames()[i],
+        paste0('Select the Weight (%) for ', critnames()[i]),
         min = 0,
         max = 100,
-        value = 100/numSliders,
-        step =1)
+        value = 100/numSliders(),
+        step = 1,
+        post = "%")
     })
+     
+     # Create a tagList of sliders
+     do.call(tagList, sliders)
     
   })
   
+
   observe(
-    updateNumericInput(session, "MCruns", value = input$value)
+    lapply(1:numSliders(), function(i) {
+      print(input$sliders)
+      updateSliderInput(
+        session,
+        critnames()[i],
+        value = input$sliders[i]/numSliders()
+      )})
+  )
+  observe(
+    updateSliderInput(session, "MCruns", value = input$value)
   )
   
   observeEvent(input$sMCDA, {
     
     critnames <- names(crit())
-    numSliders <- dim(crit)[2]
-    tmp1 <- lapply(1:length(alt), function (i) calc_ws(crit[i]))
+    tmp1 <- lapply(1:length(alt), function (i) calc_ws(crit()[i]))
     tmp2 <- lapply(1:length(alt), function(i) rep(alt,length(critnames)))
     tmp3 <- lapply(1:length(alt), function(i) rep(critnames))
     
