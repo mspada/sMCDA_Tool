@@ -6,6 +6,7 @@ library(openxlsx)
 # Dashboard global header for the sMCDA tool
 dbHeader <- dashboardHeader(title = "sMCDA Tool",
                             tags$li(a(href = 'http://www.psi.ch/ta',
+                                      target="_blank",
                                     img(src = 'psi.png',
                                     title = "Paul Scherrer Institute",
                                     height = "20px")),
@@ -65,8 +66,7 @@ ui <- dashboardPage(
                   multiple = TRUE,
                   label = h3("Select Variable"),
                   ""
-                ),
-                dataTableOutput("datatab2")
+                )
                 )
       
       ),
@@ -74,12 +74,12 @@ ui <- dashboardPage(
               fluidPage(
                 h1("Weighted Sum"),
                 box(width = 4,
-                    uiOutput("sliders"),
-                    actionButton("updateSlider", "Update Weigths")
+                    uiOutput("wssli"),
+                    actionButton("updateWSSli", "Update Weigths")
                     ),
                 box(width = 3,
-                    numericInput("MCruns", "Input Monte-Carlo runs", 1),
-                    actionButton("sMCDA","Perform sMCDA")
+                    numericInput("MCrunsws", "Input Monte-Carlo runs", 1),
+                    actionButton("sMCDAws","Perform sMCDA")
                 ),
                 box(width = 5,
                     plotOutput("IndicatorHistogram")
@@ -93,10 +93,14 @@ ui <- dashboardPage(
                   p("Input the classe thresholds for each criteria")
                   
                 ),
-                tabPanel("Thresholds & Weights"
+                tabPanel("Thresholds & Weights",
+                         uiOutput("outrankingsli"),
+                         actionButton("updateOutSli", "Update Weigths")
                          
                 ),
-                tabPanel("Simulation & Results"
+                tabPanel("Simulation & Results",
+                         numericInput("MCrunsout", "Input Monte-Carlo runs", 1),
+                         actionButton("sMCDAout","Perform sMCDA")
                          
                 )
               )
@@ -112,19 +116,30 @@ ui <- dashboardPage(
 
 server <- function(input, output, session){
   
+  ##########################################
+  ############ Input Data Page #############
+  ##########################################
+  
+  # Read input file from external source
   data <- reactive({
     
     inFile <- input$file
     # Instead # if (is.null(inFile)) ... use "req"
-    req(inFile)
+    req(inFile) 
     read.xlsx(inFile$datapath)
 
   })
   
+  # Show Data file
   output$datatab <- renderDataTable({
     data()
   })
   
+  ##########################################
+  ######## Criteria Selection Page #########
+  ##########################################
+  
+  # Select Criteria from the dataset to be used as input file 
   observe({
     updateSelectInput(
       session,
@@ -132,24 +147,31 @@ server <- function(input, output, session){
       choices=names(data()))
   })
   
+  # Generate the Criteria dataset
   crit <- reactive({
     data() %>% select(!!!input$variables)
   })
-   
   
-  critnames <- reactive(names(crit()))
-  numSliders <- reactive(length(critnames()))
   
+  # Collect Alternative names
   alt <- reactive({
     data() %>% select(1)
   })
   
-  output$datatab2 <- renderDataTable({
-    crit()
-    })
- 
-  output$sliders <- renderUI({
-     sliders <- lapply(1:numSliders(), function(i) {
+  
+  ##########################################
+  ############## Weighted Sum ##############
+  ##########################################
+  
+  # Collect criteria names 
+  critnames <- reactive(names(crit()))
+  
+  # Collect total number of criteria
+  numSliders <- reactive(length(critnames()))
+  
+  # Generate sliders for weighted sum dynamically based on the number of criteria
+  output$wssli <- renderUI({
+    lapply(1:numSliders(), function(i) {
       sliderInput(
         paste0("",critnames()[i]),
         paste0('Select the Weight (%) for ', critnames()[i]),
@@ -159,12 +181,11 @@ server <- function(input, output, session){
         step = 1,
         post = "%")
     })
-     
-     # Create a tagList of sliders
-     do.call(tagList, sliders)
+
   })
   
-  observeEvent(input$updateSlider, {
+  # Update the slider based on the input from the user
+  observeEvent(input$updateWSSli, {
     
     totslider <- numeric(0)
     for (i in 1:numSliders()){
@@ -172,20 +193,19 @@ server <- function(input, output, session){
     }
     
     lapply(1:numSliders(), function(i) {
-      print(input[[critnames()[i]]])
-      print(totslider)
       updateSliderInput(session,
                         critnames()[i],
                         value = (input[[critnames()[i]]]/totslider)*100
                         )})
   })
 
-  
+  # Select number of Monte-Carlo Runs, default is 1, i.e. no MC.
   observe(
-    updateNumericInput(session, "MCruns", value = input$value)
+    updateNumericInput(session, "MCrunsws", value = input$value)
   )
   
-  observeEvent(input$sMCDA, {
+  # Calculate the Weighted Sum MCDA
+  observeEvent(input$sMCDAws, {
     
     critnames <- names(crit())
     tmp1 <- lapply(1:length(alt), function (i) calc_ws(crit()[i]))
@@ -197,6 +217,7 @@ server <- function(input, output, session){
     
   })
   
+  # Plot the MCDA results
   output$IndicatorHistogram_res <- renderPlot({
     
     critnames <- names(data() %>% select(!!!input$variables))
@@ -223,6 +244,57 @@ server <- function(input, output, session){
             legend.title=element_blank(),
             legend.justification=c(1,1),
             legend.position="bottom")
+    
+  })
+  
+  ##########################################
+  ########## Outranking Approach ###########
+  ##########################################
+  
+  # Collect criteria names 
+  critnamesOut <- reactive(names(crit()))
+  
+  # Collect total number of criteria
+  numSlidersOut <- reactive(length(critnamesOut()))
+  
+  # Generate sliders for weighted sum dynamically based on the number of criteria
+  output$outrankingsli <- renderUI({
+    lapply(1:numSlidersOut(), function(i) {
+      sliderInput(
+        paste0("",critnamesOut()[i]),
+        paste0('Select the Weight (%) for ', critnamesOut()[i]),
+        min = 0,
+        max = 100,
+        value = 100/numSlidersOut(),
+        step = 1,
+        post = "%")
+    })
+    
+  })
+  
+  # Update the slider based on the input from the user
+  observeEvent(input$updateOutSli, {
+    
+    totsliderOut <- numeric(0)
+    for (i in 1:numSlidersOut()){
+      totsliderOut <- sum(totsliderOut, input[[critnamesOut()[i]]])
+    }
+    
+    lapply(1:numSlidersOut(), function(i) {
+      updateSliderInput(session,
+                        critnamesOut()[i],
+                        value = (input[[critnamesOut()[i]]]/totsliderOut)*100
+      )})
+  })
+  
+  # Select number of Monte-Carlo Runs, default is 1, i.e. no MC.
+  observe(
+    updateNumericInput(session, "MCrunsOut", value = input$value)
+  )
+  
+  # Calculate the Weighted Sum MCDA
+  observeEvent(input$sMCDAout, {
+    
     
   })
   
