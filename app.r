@@ -5,10 +5,11 @@ library(openxlsx)
 
 # Dashboard global header for the sMCDA tool
 dbHeader <- dashboardHeader(title = "sMCDA Tool",
-                            tags$li(a(href = 'http://www.psi.ch',
+                            tags$li(a(href = 'http://www.psi.ch/ta',
                                     img(src = 'psi.png',
-                                    title = "Paul Scherrer Institute", 
-                                    height = "18px")),
+                                    title = "Paul Scherrer Institute",
+                                    height = "20px")),
+                                    style = "padding-top:0px; padding-bottom:10px;",
                                     class = "dropdown"),
                             tags$li(a(href="mailto:matteo.spada@psi.ch",
                                     icon("envelope"),
@@ -32,7 +33,7 @@ ui <- dashboardPage(
     # Generate the sidebar items
     sidebarMenu(
       menuItem("Data Input", tabName = "input", icon = icon("database")),
-      menuItem("Criteria Selection", tabName = "criteria", icon=icon("whmcs")),
+      menuItem("Criteria Preparation", tabName = "criteria", icon=icon("whmcs")),
       menuItem("Run sMCDA", tabName = "mcda", icon = icon("chart-bar"),
                menuSubItem("Weighted Sum", tabName = "ws", icon = icon("layer-group")),
                menuSubItem("Outranking Approach", tabName = "outranking", icon = icon("layer-group"))),
@@ -73,7 +74,8 @@ ui <- dashboardPage(
               fluidPage(
                 h1("Weighted Sum"),
                 box(width = 4,
-                    uiOutput("sliders")
+                    uiOutput("sliders"),
+                    actionButton("updateSlider", "Update Weigths")
                     ),
                 box(width = 3,
                     numericInput("MCruns", "Input Monte-Carlo runs", 1),
@@ -86,8 +88,17 @@ ui <- dashboardPage(
                 
       ),
       tabItem("outranking",
-              fluidPage(
-                h1("Outranking Approach")
+              navbarPage("Outranking Approach", id = "nav",
+                tabPanel("Input Data Preparation",
+                  p("Input the classe thresholds for each criteria")
+                  
+                ),
+                tabPanel("Thresholds & Weights"
+                         
+                ),
+                tabPanel("Simulation & Results"
+                         
+                )
               )
       ),
       tabItem("about",
@@ -124,9 +135,10 @@ server <- function(input, output, session){
   crit <- reactive({
     data() %>% select(!!!input$variables)
   })
-  # 
-  # numSliders <- reactive(dim(crit())[2])
+   
+  
   critnames <- reactive(names(crit()))
+  numSliders <- reactive(length(critnames()))
   
   alt <- reactive({
     data() %>% select(1)
@@ -139,7 +151,7 @@ server <- function(input, output, session){
   output$sliders <- renderUI({
      sliders <- lapply(1:numSliders(), function(i) {
       sliderInput(
-        critnames()[i],
+        paste0("",critnames()[i]),
         paste0('Select the Weight (%) for ', critnames()[i]),
         min = 0,
         max = 100,
@@ -150,21 +162,27 @@ server <- function(input, output, session){
      
      # Create a tagList of sliders
      do.call(tagList, sliders)
-    
   })
   
-
-  observe(
+  observeEvent(input$updateSlider, {
+    
+    totslider <- numeric(0)
+    for (i in 1:numSliders()){
+      totslider <- sum(totslider, input[[critnames()[i]]])
+    }
+    
     lapply(1:numSliders(), function(i) {
-      print(input$sliders)
-      updateSliderInput(
-        session,
-        critnames()[i],
-        value = input$sliders[i]/numSliders()
-      )})
-  )
+      print(input[[critnames()[i]]])
+      print(totslider)
+      updateSliderInput(session,
+                        critnames()[i],
+                        value = (input[[critnames()[i]]]/totslider)*100
+                        )})
+  })
+
+  
   observe(
-    updateSliderInput(session, "MCruns", value = input$value)
+    updateNumericInput(session, "MCruns", value = input$value)
   )
   
   observeEvent(input$sMCDA, {
