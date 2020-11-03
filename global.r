@@ -22,6 +22,26 @@ mapviewOptions(legend.pos = "bottomright",
                basemaps = c("CartoDB.Positron", "OpenStreetMap", "OpenTopoMap"),
                homebutton = FALSE)
 
+# Dashboard global header for the sMCDA tool
+dbHeader <- dashboardHeader(title = "sMCDA Tool",
+                            tags$li(a(href = 'http://www.psi.ch/ta',
+                                      target="_blank",
+                                      img(src = 'psi.png',
+                                          title = "Paul Scherrer Institute",
+                                          height = "20px")),
+                                    style = "padding-top:0px; padding-bottom:10px;",
+                                    class = "dropdown"),
+                            tags$li(a(href="mailto:matteo.spada@psi.ch",
+                                      target="_blank",
+                                      icon("envelope"),
+                                      title = "Contact Us"),
+                                    class = "dropdown"),
+                            tags$li(a(href = 'http://www.psi.ch',
+                                      icon("power-off"),
+                                      title = "Logout"),
+                                    class = "dropdown"))
+
+
 ########################################################
 # Libraries required by the application
 ########################################################
@@ -36,28 +56,28 @@ calc_ws <- function(ind1,ind2,ind3,ind4,ind5,ind6,ind7,ind8){
 colfunc <- colorRampPalette(c("green", "red"))
 
 # Create color palette for the indicator and results plot
-pal <- colorBin(
-  palette = colfunc(10),
-  domain = df.poly_new$ClimateCh,
-  bins=10,
-  na.color = c("white")
-)
-
-# Create color palette for the heat flux plot
-pal_hf <- colorBin(
-  palette = brewer.pal(7,"Spectral"),
-  domain = df.poly_new$HeatFlux,
-  bins=7,
-  na.color = c("white")
-)
-
-# Create color palette for the sMCDA plot
-pal_sM <- colorBin(
-  palette = brewer.pal(5,"RdYlGn"),
-  domain = df.poly_new$DoubEqu,
-  bins=4,
-  na.color = c("white")
-)
+# pal <- colorBin(
+#   palette = colfunc(10),
+#   domain = df.poly_new$ClimateCh,
+#   bins=10,
+#   na.color = c("white")
+# )
+# 
+# # Create color palette for the heat flux plot
+# pal_hf <- colorBin(
+#   palette = brewer.pal(7,"Spectral"),
+#   domain = df.poly_new$HeatFlux,
+#   bins=7,
+#   na.color = c("white")
+# )
+# 
+# # Create color palette for the sMCDA plot
+# pal_sM <- colorBin(
+#   palette = brewer.pal(5,"RdYlGn"),
+#   domain = df.poly_new$DoubEqu,
+#   bins=4,
+#   na.color = c("white")
+# )
 
 
 electretri <- function (performanceMatrix, profiles,minmaxcriteria, criteriaWeights, IndifferenceThresholds, 

@@ -1,26 +1,7 @@
-###########################################
+# Objects in this file are shared across all sessions in the same R process
+source("global.r")
 
-# Dashboard global header for the sMCDA tool
-dbHeader <- dashboardHeader(title = "sMCDA Tool",
-                            tags$li(a(href = 'http://www.psi.ch/ta',
-                                      target="_blank",
-                                    img(src = 'psi.png',
-                                    title = "Paul Scherrer Institute",
-                                    height = "20px")),
-                                    style = "padding-top:0px; padding-bottom:10px;",
-                                    class = "dropdown"),
-                            tags$li(a(href="mailto:matteo.spada@psi.ch",
-                                      target="_blank",
-                                    icon("envelope"),
-                                    title = "Contact Us"),
-                                    class = "dropdown"),
-                            tags$li(a(href = 'http://www.psi.ch',
-                                    icon("power-off"),
-                                    title = "Logout"),
-                                    class = "dropdown"))
-
-
-# Graphical user interface using shinydashboard
+# Graphical user interface using Shinydashboard
 ui <- dashboardPage(
   
   # Generate the header
@@ -41,13 +22,14 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     tabItems(
+      # Generate the Data Input Tab
       tabItem("input", 
               fluidPage(
                 
                 fluidRow(
                   
                   column(width = 4,
-                         titlePanel("Input Data"),
+                         titlePanel("Data Input"),
                          p("Welcome to spatial Multi-Criteria Decison Analysis Tool!"),
                          p("Data format: First column for the alternatives and the 
                   remaining columns for the performance of the alternatives on 
@@ -82,6 +64,7 @@ ui <- dashboardPage(
                 )
               )
       ),
+      # Generate the Criteria Selection and Elaboration Tab
       tabItem("criteria",
               fluidPage(
                 h1("Criteria Selection"),
@@ -93,6 +76,7 @@ ui <- dashboardPage(
                 )
                 ),
               ),
+      # Generate the Weighted Sum Tab
       tabItem("ws",
               fluidPage(
                 h1("Weighted Sum"),
@@ -110,6 +94,7 @@ ui <- dashboardPage(
                 )
                 
       ),
+      #Generate the Outranking Method Tab
       tabItem("outranking",
               navbarPage("Outranking Approach", id = "nav",
                 tabPanel("Input Data Preparation",
@@ -128,6 +113,7 @@ ui <- dashboardPage(
                 )
               )
       ),
+      # Generate the About page
       tabItem("about",
               fluidPage(
                 h1("About")
