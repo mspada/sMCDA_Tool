@@ -1,22 +1,4 @@
-library(shiny)
-library(shinydashboard)
-library(tidyverse)
-library(sf)
-library(leaflet)
-library(mapview)
-library(ggplot2)
-
-########## To Put in Global.r ###############
-options(shiny.maxRequestSize=100*1024^2) # Increasing maximum uploadable file size, now 100 MB
-# Remember: ID at 1st column and Alternatives Names at the second column always!!!!
-#colors <- reactive({brewer.pal(10, "RdYlGn")}) # Put in the global.r script
-mapviewOptions(legend.pos = "bottomright",
-               layers.control.pos = "topleft",
-               basemaps = c("CartoDB.Positron", "OpenStreetMap", "OpenTopoMap"),
-               homebutton = FALSE)
-
 ###########################################
-
 
 # Dashboard global header for the sMCDA tool
 dbHeader <- dashboardHeader(title = "sMCDA Tool",
