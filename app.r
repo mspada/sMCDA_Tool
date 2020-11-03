@@ -1,7 +1,22 @@
 library(shiny)
 library(shinydashboard)
 library(tidyverse)
-library(openxlsx)
+library(sf)
+library(leaflet)
+library(mapview)
+library(ggplot2)
+
+########## To Put in Global.r ###############
+options(shiny.maxRequestSize=100*1024^2) # Increasing maximum uploadable file size, now 100 MB
+# Remember: ID at 1st column and Alternatives Names at the second column always!!!!
+#colors <- reactive({brewer.pal(10, "RdYlGn")}) # Put in the global.r script
+mapviewOptions(legend.pos = "bottomright",
+               layers.control.pos = "topleft",
+               basemaps = c("CartoDB.Positron", "OpenStreetMap", "OpenTopoMap"),
+               homebutton = FALSE)
+
+###########################################
+
 
 # Dashboard global header for the sMCDA tool
 dbHeader <- dashboardHeader(title = "sMCDA Tool",
@@ -13,6 +28,7 @@ dbHeader <- dashboardHeader(title = "sMCDA Tool",
                                     style = "padding-top:0px; padding-bottom:10px;",
                                     class = "dropdown"),
                             tags$li(a(href="mailto:matteo.spada@psi.ch",
+                                      target="_blank",
                                     icon("envelope"),
                                     title = "Contact Us"),
                                     class = "dropdown"),
@@ -45,17 +61,43 @@ ui <- dashboardPage(
     tabItems(
       tabItem("input", 
               fluidPage(
-                titlePanel("Input Data"),
-                p("Welcome to spatial Multi-Criteria Decison Analysis Tool!"),
-                p("Data format: First column for the alternatives and the 
+                
+                fluidRow(
+                  
+                  column(width = 4,
+                         titlePanel("Input Data"),
+                         p("Welcome to spatial Multi-Criteria Decison Analysis Tool!"),
+                         p("Data format: First column for the alternatives and the 
                   remaining columns for the performance of the alternatives on 
                   the criteria. The performances of the alternatives should be 
                   numerical values. Download a sample file. "),
-
-                fileInput("file", NULL, 
-                          buttonLabel = "Upload...", 
-                          multiple = FALSE),
-                dataTableOutput("datatab")
+                         
+                         fileInput("file", NULL, 
+                                   buttonLabel = "Upload...", 
+                                   accept=c(".shp",".dbf",".sbn",".sbx",".shx",".prj"),
+                                   multiple = TRUE),
+                         wellPanel(
+                           radioButtons("visuBtn", NULL, choices = c(Table = "Table", Map = "Map"))
+                         )),
+                  column(width = 8,
+                         conditionalPanel(
+                           condition = "input.visuBtn == 'Table'",
+                           dataTableOutput("datatab")
+                         ),
+                         conditionalPanel(
+                           condition = "input.visuBtn == 'Map'",
+                           selectInput("layers",
+                                       label=h3("Show Layer"),
+                                       "",
+                                       selected = NULL
+                                       
+                           ),
+                           checkboxInput('hist', "Show Histogram", FALSE),
+                           mapviewOutput("mapplot", height = "600px"),
+                           plotOutput("histogram")
+                         )
+                  )
+                )
               )
       ),
       tabItem("criteria",
@@ -67,9 +109,8 @@ ui <- dashboardPage(
                   label = h3("Select Variable"),
                   ""
                 )
-                )
-      
-      ),
+                ),
+              ),
       tabItem("ws",
               fluidPage(
                 h1("Weighted Sum"),
@@ -114,20 +155,76 @@ ui <- dashboardPage(
   )
 )
 
+
 server <- function(input, output, session){
   
   ##########################################
   ############ Input Data Page #############
   ##########################################
   
-  # Read input file from external source
+  # Read input file from external source to do this upload all possible files in the 
   data <- reactive({
     
     inFile <- input$file
     # Instead # if (is.null(inFile)) ... use "req"
     req(inFile) 
-    read.xlsx(inFile$datapath)
-
+    
+    dir <- dirname(inFile[1,4])
+    
+    for ( i in 1:nrow(inFile)) {
+      file.rename(inFile[i,4], paste0(dir,"/",inFile[i,1]))}
+    
+    getshp <- list.files(dir, pattern="*.shp", full.names=TRUE)
+    st_read(getshp)
+  })
+  
+  # Generate the Criteria dataset
+  layers <- reactive({
+    data() %>% select(-1) %>% st_drop_geometry() # Only for CCS test
+    # data() %>% select(-c(1,2)) %>% st_drop_geometry() # Corrected one
+  })
+  
+  # Collect Alternative names
+  alternatives <- reactive({
+    data() %>% select(1) %>% st_drop_geometry() # Only for CCS test
+    # data() %>% select(2) %>% st_drop_geometry() # Corrected One 
+  })
+  
+  # Select Criteria from the dataset to be used as input file 
+  observe({
+    updateSelectInput(
+      session,
+      "layers",
+      choices=names(layers()),
+      selected = NULL)
+  })
+  
+  output$histogram <- renderPlot({
+    
+    if (input$hist > 0) {
+      inphist <- data() %>% st_drop_geometry() 
+      ggplot() +
+        geom_bar(aes(x=inphist[,1],y=inphist[,input$layers]), # In the corrected version use inphist[,1] for x
+                 stat="identity", width=0.5,color="black",fill="black") +
+        xlab("Alternative") + ylab(input$layers) +
+        theme_set(theme_bw(base_size = 20)) +
+        theme(panel.border=element_rect(size=1.2, colour = "black"),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              axis.title=element_text(size=22,face="bold"),
+              axis.ticks=element_line(size = 1.2,colour = "black"),
+              legend.position="none")
+    }
+    
+  }, bg="transparent")
+  
+  
+  observeEvent(input$layers,{
+    
+    indt <- data() %>% select(input$layers)
+    indt_nogeom <- indt %>% st_drop_geometry() 
+    output$mapplot <- renderMapview(mapview(indt,
+                                            layer.name = input$layers))  
   })
   
   # Show Data file
@@ -152,16 +249,10 @@ server <- function(input, output, session){
     data() %>% select(!!!input$variables)
   })
   
-  
   # Collect Alternative names
   alt <- reactive({
     data() %>% select(1)
   })
-  
-  
-  ##########################################
-  ############## Weighted Sum ##############
-  ##########################################
   
   # Collect criteria names 
   critnames <- reactive(names(crit()))
@@ -169,11 +260,39 @@ server <- function(input, output, session){
   # Collect total number of criteria
   numSliders <- reactive(length(critnames()))
   
+  output$unccrit <- renderUI({
+    lapply(1:numSliders(), function(i) {
+      list(radioButtons(critnames()[i],
+                        paste0('Select nature of ', critnames()[i]),
+                        choices = c("Exact" = "exact", 
+                                    "Uncertain" = "pdf"), selected = "exact"))
+    })
+  })
+  
+  # output$uncdist <- renderUI({
+  #   lapply(1:numSliders(), function(i) {
+  #     if (unccrit == "pdf"){
+  #       list(radioButtons(critnames()[i],
+  #                         paste0('Select distribution for ', critnames()[i]),
+  #                         choices = c("" = "exact", 
+  #                                     "Uncertain" = "pdf"), selected = "exact")) 
+  #     } else {
+  #       NULL
+  #       }
+  #   })
+  # })
+  
+  ##########################################
+  ############## Weighted Sum ##############
+  ##########################################
+  
+ 
+  
   # Generate sliders for weighted sum dynamically based on the number of criteria
   output$wssli <- renderUI({
     lapply(1:numSliders(), function(i) {
       sliderInput(
-        paste0("",critnames()[i]),
+        critnames()[i],
         paste0('Select the Weight (%) for ', critnames()[i]),
         min = 0,
         max = 100,
@@ -261,7 +380,7 @@ server <- function(input, output, session){
   output$outrankingsli <- renderUI({
     lapply(1:numSlidersOut(), function(i) {
       sliderInput(
-        paste0("",critnamesOut()[i]),
+        critnamesOut()[i],
         paste0('Select the Weight (%) for ', critnamesOut()[i]),
         min = 0,
         max = 100,
@@ -279,7 +398,7 @@ server <- function(input, output, session){
     for (i in 1:numSlidersOut()){
       totsliderOut <- sum(totsliderOut, input[[critnamesOut()[i]]])
     }
-    
+    print(input[[critnamesOut()[1]]])
     lapply(1:numSlidersOut(), function(i) {
       updateSliderInput(session,
                         critnamesOut()[i],
