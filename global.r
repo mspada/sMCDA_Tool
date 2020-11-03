@@ -1,15 +1,15 @@
 ########################################################
 # Libraries required by the application
 ########################################################
-library(plyr)
-library(dplyr)
-library(ggplot2)
-library(leaflet)
-library(maptools)
-library(RColorBrewer)
-library(rgeos)
-library(shiny)
-library(shinydashboard)
+# library(plyr)
+# library(dplyr)
+# library(ggplot2)
+# library(leaflet)
+# library(maptools)
+# library(RColorBrewer)
+# library(rgeos)
+# library(shiny)
+# library(shinydashboard)
 
 ########################################################
 # Function used for the calculation
