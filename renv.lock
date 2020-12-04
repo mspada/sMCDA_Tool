@@ -27,6 +27,13 @@
       "Repository": "RSPM",
       "Hash": "4744be45519d675af66c28478720fce5"
     },
+    "DT": {
+      "Package": "DT",
+      "Version": "0.16",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "acac794cc3e393ca65f916e5ced5c1d2"
+    },
     "KernSmooth": {
       "Package": "KernSmooth",
       "Version": "2.23-17",
@@ -244,6 +251,13 @@
       "Repository": "RSPM",
       "Hash": "a0cbe758a531d054b537d16dff4d58a1"
     },
+    "doParallel": {
+      "Package": "doParallel",
+      "Version": "1.0.16",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "2dc413572eb42475179bfe0afabd2adf"
+    },
     "dplyr": {
       "Package": "dplyr",
       "Version": "1.0.2",
@@ -300,12 +314,12 @@
       "Repository": "RSPM",
       "Hash": "1cb4279e697650f0bd78cd3601ee7576"
     },
-    "foreign": {
-      "Package": "foreign",
-      "Version": "0.8-80",
+    "foreach": {
+      "Package": "foreach",
+      "Version": "1.5.1",
       "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "ae1b1e15cc6ccb2bc61c0ac33e86d35f"
+      "Repository": "RSPM",
+      "Hash": "e32cfc0973caba11b65b1fa691b4d8c9"
     },
     "fs": {
       "Package": "fs",
@@ -411,6 +425,13 @@
       "Source": "Repository",
       "Repository": "RSPM",
       "Hash": "6e58bd3d6b3dd82a944cd6f05ade228f"
+    },
+    "iterators": {
+      "Package": "iterators",
+      "Version": "1.0.13",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "64778782a89480e9a644f69aad9a2877"
     },
     "jsonlite": {
       "Package": "jsonlite",
@@ -563,6 +584,13 @@
       "Source": "Repository",
       "Repository": "RSPM",
       "Hash": "a399e4773075fc2375b71f45fca186c4"
+    },
+    "openxlsx": {
+      "Package": "openxlsx",
+      "Version": "4.2.3",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "2253a430965e222d11a2f9277cd34c2e"
     },
     "pillar": {
       "Package": "pillar",
@@ -976,6 +1004,13 @@
       "Source": "Repository",
       "Repository": "RSPM",
       "Hash": "2826c5d9efb0a88f657c7a679c7106db"
+    },
+    "zip": {
+      "Package": "zip",
+      "Version": "2.1.1",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "3bc8405c637d988801ec5ea88372d0c2"
     }
   }
 }
