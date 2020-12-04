@@ -2,7 +2,6 @@
 # 
 # Input Data Table: 
 #    - When updating the table is not updating the underline reactive data.frame
-#    - Download button for maps, histogram and also table since I can modify it
 #
 # WS:
 #    - Having both layers (Mean and SD) --> Do it with Dropdown Selection
@@ -16,17 +15,15 @@
 #    - Download button for maps, histogram, csv and shp file
 #    - Add Progress bar
 
-
-# Objects in this file are shared across all sessions in the same R process
 source("global.r")
 
-# Graphical user interface using Shinydashboard
+###########################################
+
 ui <- dashboardPage(
   
   # Generate the header
   dbHeader,
   
-  # Generate the Sidebar
   # Generate the Sidebar
   dashboardSidebar(
     
@@ -76,10 +73,9 @@ ui <- dashboardPage(
                            ),
                            checkboxInput('hist', "Show Histogram", FALSE),
                            mapviewOutput("mapplot", height = "600px"),
-                           uiOutput("downloadInMap"),# For Download TO CHECK
-                           plotOutput("histogram")
-                           # downloadButton("hist"), # For Download TO CHECK
-                           
+                           uiOutput("downloadInMap"),
+                           plotOutput("histogram"),
+                           uiOutput("downloadInHist")
                          )
                   )
                   
@@ -329,12 +325,13 @@ server <- function(input, output, session){
   })
   
   # Render the histogram of the selected Criteria if the "Show Histogram" is checked
+  histexp <- reactiveValues(dat = 0)
   output$histogram <- renderPlot({
     
     if (input$hist > 0) {
       
       inphist <- data()
-      ggplot() +
+      histexp$dat <- ggplot() +
         geom_bar(aes(x=inphist[,1],y=inphist[,input$layers]), # In the corrected version use inphist[,2] for x
                  stat="identity", width=0.5,color="black",fill="black") +
         xlab("Alternative") + ylab(input$layers) +
@@ -345,10 +342,26 @@ server <- function(input, output, session){
               axis.title=element_text(size=22,face="bold"),
               axis.ticks=element_line(size = 1.2,colour = "black"),
               legend.position="none")
+      histexp$dat
     }
+    
     
   }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
   
+  output$downloadInHist <- renderUI(
+    if(input$hist > 0)  downloadButton('download_hist', label = 'Download Histogram')
+  )
+  
+  output$download_hist <- downloadHandler(
+    filename = function(){
+      paste0(getwd(),"/hist_",input$layers,"_",Sys.Date(),".png")
+    },
+    content = function(file) {
+      png(file, width = 900,height = 300)
+      print(histexp$dat)
+      dev.off()
+    }
+  )
   
   # Plot the layer under interest when the radioButton "Map" is selected
   mapexp <- reactiveValues(dat = 0)
@@ -360,31 +373,23 @@ server <- function(input, output, session){
                                                           layer.name = input$layers
     ))
     
-    ############################ 
-    # TO BE CHECKED FOR DOWNLOADING REASONS
     output$downloadInMap <- renderUI(
       
       if(input$layers > 0) downloadButton('download_map', label = 'Download Map') 
     )
     
     output$download_map <- downloadHandler(
-      filename = paste0(getwd(),"/map_",input$layer,"_",Sys.Date(),".png"),
+      filename = function(){
+        paste0(getwd(),"/map_",input$layers,"_",Sys.Date(),".png")
+      },
       contentType = c("image/png"),
       content = function(file){
         mapshot(mapexp$dat,
-                file = paste0(getwd(),"/map_",input$layer,"_",Sys.Date(),".png"),
+                file = file,
                 remove_controls = c("zoomControl", "layersControl")
-        )}
+        )
+      }
     )
-    # output$hist <- downloadHandler(
-    #   filename = "hist.png",
-    #   
-    #   content = function(file) {
-    #     input[["histogram"]]
-    #   }
-    # )
-    
-    
   })
   
   
