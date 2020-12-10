@@ -1,19 +1,19 @@
 # TO DO
 # 
-# Input Data Table: 
-#    - When updating the table is not updating the underline reactive data.frame
-#
-# WS:
-#    - Having both layers (Mean and SD) --> Do it with Dropdown Selection
-#    - Download button for maps, histogram, csv and shp file
-#    - Add Progress bar
+# Priorities:
+#   Input Data Table, WS, Outranking: 
+#     - Colorbars
 # 
-# Outranking:
-#    - Possibility to choose if profiles and thresholds as csv/excel input?
-#    - Solve problem with hiding weight scheme if Sample Weight is selected
-#    - Having both layers (Mean and SD) --> Do it with Dropdown Selection
-#    - Download button for maps, histogram, csv and shp file
-#    - Add Progress bar
+#   Outranking:
+#     - Solve problem with hiding stuffs
+#
+#   About Page
+#
+# Later: 
+#   - Login Page
+#   - When updating the table is not updating the underline reactive data.frame
+#   - When changing Table allow to download new shp in input data page
+#   - Plot both Mean and SD Layer map --> Do it with Dropdown Selection?
 
 source("global.r")
 
@@ -61,10 +61,6 @@ ui <- dashboardPage(
                          )),
                   column(width = 8,
                          conditionalPanel(
-                           condition = "input.visuBtn == 'Table'",
-                           DTOutput('datatab')
-                         ),
-                         conditionalPanel(
                            condition = "input.visuBtn == 'Map'",
                            selectInput("layers",
                                        label=h3("Show Layer"),
@@ -78,8 +74,15 @@ ui <- dashboardPage(
                            uiOutput("downloadInHist")
                          )
                   )
+                ),
+                fluidRow(
+                  conditionalPanel(
+                    condition = "input.visuBtn == 'Table'",
+                    DTOutput('datatab')
+                  )
                   
                 )
+                
               )
       ),
       # Generate the Criteria Selection and Elaboration Tab
@@ -135,8 +138,9 @@ ui <- dashboardPage(
                            condition = "input.sMCDAws == TRUE", # Generate the result panel only once the "Perform sMCDA" button is clicked
                            checkboxInput('MCDAhistws', "Show Histogram", FALSE),
                            mapviewOutput("resmapws", height = "600px"),
-                           plotOutput("reshistws")  
-                           
+                           uiOutput("downloadWSMap"),
+                           plotOutput("reshistws"),
+                           uiOutput("downloadWSHist")
                          )
                   )
                   
@@ -149,60 +153,58 @@ ui <- dashboardPage(
       tabItem("outranking",
               navbarPage("Outranking Approach", id = "nav",
                          tabPanel("Input Data Preparation",
-                                  wellPanel(
-                                    numericInput("nmbclassout", "Insert the number of classes of interest:", NULL)
-                                  ),
-                                  uiOutput("classout")
-                                  
+                                  fluidPage(
+                                    wellPanel(
+                                      numericInput("nmbclassout", "Insert the number of classes of interest:", NULL)
+                                    ),
+                                    uiOutput("classout")
+                                  )
                          ),
                          tabPanel("Thresholds",
                                   fluidPage(
-                                    fluidRow(
-                                      column(4,
-                                             h4("Select Indifference Thresholds"),
-                                             uiOutput("indthrout")
-                                      ),
-                                      column(4,
-                                             h4("Select Preference Thresholds"),
-                                             uiOutput("prefthrout")
-                                      ),
-                                      column(4,
-                                             h4("Select Veto Thresholds"),
-                                             uiOutput("vetothrout")
-                                      )
+                                    column(4,
+                                           h4("Select Indifference Thresholds"),
+                                           uiOutput("indthrout")
+                                    ),
+                                    column(4,
+                                           h4("Select Preference Thresholds"),
+                                           uiOutput("prefthrout")
+                                    ),
+                                    column(4,
+                                           h4("Select Veto Thresholds"),
+                                           uiOutput("vetothrout")
                                     )
                                   )
                                   
                          ),
                          tabPanel("Simulation & Results",
                                   fluidPage(
-                                    fluidRow(
-                                      column(3,
-                                             wellPanel(
-                                               radioButtons("outSelBtn", "Select Weight Profile:", choices = c("Sample Weights" = "SWout", "Input Weights" = "IWout")),  
-                                             ),
-                                             conditionalPanel(
-                                               condition = "input.outSelBtn == 'IWout'", # Input weight profiles manually only when "Input Weights" is selected
-                                               uiOutput("outrankingsli"),
-                                               actionButton("updateOutSli", "Update Weigths") 
-                                             )
-                                      ),
-                                      column(2,
-                                             p(""),
-                                             sliderInput("lambda", label = h3("Input Decision Maker strongness:"), min = 0, 
-                                                         max = 100, value = c(51, 85)),
-                                             numericInput("MCrunsout", "Input Monte-Carlo runs", 1),
-                                             actionButton("sMCDAout","Perform sMCDA")
-                                      ),
-                                      column(7,
-                                             conditionalPanel(
-                                               condition = "input.sMCDAout == TRUE", # Generate the result panel only once the "Perform sMCDA" button is clicked
-                                               checkboxInput('MCDAhistOut', "Show Histogram", FALSE),
-                                               mapviewOutput("resmapout", height = "600px"),
-                                               plotOutput("reshistout")  
-                                               
-                                             )
-                                      )
+                                    column(3,
+                                           wellPanel(
+                                             radioButtons("outSelBtn", "Select Weight Profile:", choices = c("Sample Weights" = "SWout", "Input Weights" = "IWout")),  
+                                           ),
+                                           conditionalPanel(
+                                             condition = "input.outSelBtn == 'IWout'", # Input weight profiles manually only when "Input Weights" is selected
+                                             uiOutput("outrankingsli"),
+                                             actionButton("updateOutSli", "Update Weigths") 
+                                           )
+                                    ),
+                                    column(2,
+                                           p(""),
+                                           sliderInput("lambda", label = h3("Input Decision Maker strongness:"), min = 0,
+                                                       max = 100, value = c(51, 85)),
+                                           numericInput("MCrunsout", "Input Monte-Carlo runs", 1),
+                                           actionButton("sMCDAout","Perform sMCDA")
+                                    ),
+                                    column(7,
+                                           conditionalPanel(
+                                             condition = "input.sMCDAout == TRUE", # Generate the result panel only once the "Perform sMCDA" button is clicked
+                                             checkboxInput('MCDAhistOut', "Show Histogram", FALSE),
+                                             mapviewOutput("resmapout", height = "600px"),
+                                             uiOutput("downloadOutMap"),
+                                             plotOutput("reshistout"),
+                                             uiOutput("downloadOutHist")
+                                           )
                                     )
                                   )
                          )
@@ -221,6 +223,7 @@ ui <- dashboardPage(
 
 server <- function(input, output, session){
   
+  
   ##########################################
   ############ Input Data Page #############
   ##########################################
@@ -228,10 +231,8 @@ server <- function(input, output, session){
   #
   # Browse and upload input file
   #
-  
   # Read input file from external source to do this upload all possible files in the 
   in.data.file <- reactive({
-    
     inFile <- input$file # rename input for code simplicity 
     
     req(inFile) # This is used instead of # if(is.null(inFile))
@@ -244,9 +245,11 @@ server <- function(input, output, session){
     
     getshp <- list.files(dir, pattern="*.shp", full.names=TRUE)
     st_read(getshp)
-    
   })
   
+  #
+  # Plot and Table section
+  #
   # Collect the dataset without spatial geometry
   data <- reactive({
     in.data.file() %>% st_drop_geometry()
@@ -259,37 +262,15 @@ server <- function(input, output, session){
   
   # Collect Alternative names
   alternatives <- reactive({
-    in.data.file() %>% select(1) %>% st_drop_geometry() # Only for CCS test
+    data() %>% select(1)  # Only for CCS test
     # data() %>% select(2) %>% st_drop_geometry() # Corrected One 
   })
-  
-  #
-  # Plot and Table section
-  #
-  # # Show input data when the radio button "Table" is selected (this is the default)
-  # output$datatab <- renderDataTable({
-  #   data() %>% st_drop_geometry() # data() is the input file in the original version, now in.data.file()
-  # })
-  
-  # # Edit a single cell
-  # proxy = dataTableProxy('datatab')
-  # observeEvent(input$datatab_cell_edit, {
-  #   # data <<- editData(data(),input$datatab_cell_edit, 'datatab')
-  #   info = input$datatab_cell_edit
-  #   str(info)
-  #   i = info$row
-  #   j = info$col + 1
-  #   v = info$value
-  #   # Below is the crucial spot where the reactive value is used where a reactive expression cannot be used
-  #   data$x[i, j] <<- coerceValue(v, data$x[i, j])
-  #   replaceData(proxy, data$x, resetPaging = FALSE, rownames = FALSE)
-  # })
   
   
   # Show input data when the radio button "Table" is selected (this is the default)
   output$datatab <- renderDT(
-    datatable(data(), 
-              editable = TRUE,
+    datatable(data(),
+              editable = "cell",
               rownames = FALSE,
               selection = 'none',
               extensions = 'Buttons', 
@@ -315,7 +296,6 @@ server <- function(input, output, session){
     data() %>% select(-1)
   }) # Only for CCS test
   
-  
   # Select Criteria from the data.frame to be used for plot purposes 
   observe({
     updateSelectInput(
@@ -327,10 +307,10 @@ server <- function(input, output, session){
   # Render the histogram of the selected Criteria if the "Show Histogram" is checked
   histexp <- reactiveValues(dat = 0)
   output$histogram <- renderPlot({
-    
     if (input$hist > 0) {
       
       inphist <- data()
+      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       histexp$dat <- ggplot() +
         geom_bar(aes(x=inphist[,1],y=inphist[,input$layers]), # In the corrected version use inphist[,2] for x
                  stat="identity", width=0.5,color="black",fill="black") +
@@ -342,24 +322,28 @@ server <- function(input, output, session){
               axis.title=element_text(size=22,face="bold"),
               axis.ticks=element_line(size = 1.2,colour = "black"),
               legend.position="none")
+      remove_modal_spinner()
       histexp$dat
     }
     
-    
   }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
   
+  # Download button for histogram
   output$downloadInHist <- renderUI(
-    if(input$hist > 0)  downloadButton('download_hist', label = 'Download Histogram')
+    if(input$hist > 0)  downloadButton("download_hist", "Download Histogram", icon = icon("download"))
   )
+  
   
   output$download_hist <- downloadHandler(
     filename = function(){
       paste0(getwd(),"/hist_",input$layers,"_",Sys.Date(),".png")
     },
     content = function(file) {
+      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       png(file, width = 900,height = 300)
       print(histexp$dat)
       dev.off()
+      remove_modal_spinner()
     }
   )
   
@@ -367,15 +351,17 @@ server <- function(input, output, session){
   mapexp <- reactiveValues(dat = 0)
   
   observeEvent(input$layers,{
-    
     indt <- data() %>% select(input$layers) %>% st_set_geometry(geom())
-    output$mapplot <- renderMapview(mapexp$dat <- mapview(indt,
-                                                          layer.name = input$layers
-    ))
+    show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+    output$mapplot <- renderMapview(mapexp$dat <- mapview(indt,layer.name = input$layers))
+    remove_modal_spinner()
     
+    # Download button for map
     output$downloadInMap <- renderUI(
       
-      if(input$layers > 0) downloadButton('download_map', label = 'Download Map') 
+      if(input$layers > 0) {
+        downloadButton("download_map", "Download Image", icon = icon("download")) 
+      } 
     )
     
     output$download_map <- downloadHandler(
@@ -384,15 +370,15 @@ server <- function(input, output, session){
       },
       contentType = c("image/png"),
       content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
         mapshot(mapexp$dat,
                 file = file,
                 remove_controls = c("zoomControl", "layersControl")
         )
+        remove_modal_spinner()
       }
     )
   })
-  
-  
   
   ##########################################
   ######## Criteria Selection Page #########
@@ -463,10 +449,6 @@ server <- function(input, output, session){
   
   # Collect total number of criteria
   numCriteria <- reactive(length(critnames()))
-  
-  ###########################################
-  # End modification
-  ##########################################
   
   # Select inputs for further analysis, i.e. criteria information like polarity, behavior (exact or type of distribution), etc.
   # Automatically rendering the page based on the selection of criteria
@@ -689,6 +671,10 @@ server <- function(input, output, session){
     updateNumericInput(session, "MCrunsws", value = input$value)
   )
   
+  # reactiveValues for map and histogram download
+  mapWSexp <- reactiveValues(dat = 0)
+  histWSexp <- reactiveValues(dat = 0)
+  
   # Calculate the Weighted Sum MCDA
   observeEvent(input$sMCDAws, {
     
@@ -709,14 +695,15 @@ server <- function(input, output, session){
     # Check number of Runs
     if(input$MCrunsws != 1){
       
-      print(polarity())
-      print(nature())
-      print(inMCDAmat())
+      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
       # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
       sMCDAresws <- sMCDAunccritWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
+      remove_modal_spinner()
       
+      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       # Plot the resulting sMCDA map score
-      output$resmapws <- renderMapview(mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score")))
+      output$resmapws <- renderMapview(mapWSexp$dat <- mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score")))
+      remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
       output$reshistws <- renderPlot({
@@ -724,7 +711,8 @@ server <- function(input, output, session){
         if (input$MCDAhistws > 0) {
           
           inphist <- sMCDAresws %>% st_drop_geometry()
-          ggplot() +
+          show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+          histWSexp$dat <- ggplot() +
             geom_bar(aes(x=inphist[,1],y=inphist[,2]),
                      stat="identity", width=0.5,color="red",fill="red") +
             geom_errorbar(aes(x=inphist[,1], ymin=pmax(inphist[,2]-inphist[,3],0), ymax=pmin(inphist[,2]+inphist[,3],1)), width=.2) +
@@ -736,22 +724,23 @@ server <- function(input, output, session){
                   axis.title=element_text(size=22,face="bold"),
                   axis.ticks=element_line(size = 1.2,colour = "black"),
                   legend.position="none")
+          remove_modal_spinner()
+          histWSexp$dat
         }
         
       }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
       
-      
     } else {
       
-      print(polarity())
-      print(ws.weights)
-      print(inMCDAmat())
-      
+      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
       # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
       sMCDAresws <- sMCDAallexactcritWS(alternatives(),geom(),inMCDAmat(),polarity(),ws.weights)
+      remove_modal_spinner()
       
+      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       # Plot the resulting sMCDA map score
-      output$resmapws <- renderMapview(mapview(sMCDAresws[,2],layer.name = c("sMCDA Score")))
+      output$resmapws <- renderMapview(mapWSexp$dat <- mapview(sMCDAresws[,2],layer.name = c("sMCDA Score")))
+      remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
       output$reshistws <- renderPlot({
@@ -759,7 +748,8 @@ server <- function(input, output, session){
         if (input$MCDAhistws > 0) {
           
           inphist <- sMCDAresws %>% st_drop_geometry()
-          ggplot() +
+          show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+          histWSexp$dat <- ggplot() +
             geom_bar(aes(x=inphist[,1],y=inphist[,2]),
                      stat="identity", width=0.5,color="red",fill="red") +
             xlab("Alternative") + ylab("sMCDA Score") +
@@ -770,11 +760,127 @@ server <- function(input, output, session){
                   axis.title=element_text(size=22,face="bold"),
                   axis.ticks=element_line(size = 1.2,colour = "black"),
                   legend.position="none")
+          remove_modal_spinner()
+          histWSexp$dat
         }
         
       }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
       
     }
+    
+    # Download  map
+    output$downloadWSMap <- renderUI(
+      actionButton("download_WSmap", "Download Map", icon = icon("download"))
+    )
+    
+    # Open Modal on button click
+    observeEvent(input$download_WSmap,
+                 ignoreInit = TRUE,
+                 ignoreNULL = TRUE,   # Show modal on start up
+                 showModal(myDownloadImagesWSRes())
+    )
+    
+    output$download_ws_png <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_weightedsum_",Sys.Date(),".png")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        mapshot(mapWSexp$dat,
+                file = file,
+                remove_controls = c("zoomControl", "layersControl")
+        )
+        removeModal()
+        remove_modal_spinner()
+      }
+    )
+    output$download_ws_jpg <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_weightedsum_",Sys.Date(),".jpg")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        mapshot(mapWSexp$dat,
+                file = file,
+                remove_controls = c("zoomControl", "layersControl")
+        )
+        removeModal()
+        remove_modal_spinner()
+      }
+    )
+    output$download_ws_csv <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_weightedsum_",Sys.Date(),".csv")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        write.csv(sMCDAresws %>% st_drop_geometry(),file,row.names = FALSE)
+        removeModal()
+        remove_modal_spinner()
+      }
+    )
+    output$download_ws_xlsx <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_weightedsum_",Sys.Date(),".xlsx")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        write.xlsx(sMCDAresws %>% st_drop_geometry(),file)
+        removeModal()
+        remove_modal_spinner()
+      }
+    )
+    output$download_ws_shp <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_weightedsum.zip")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        dataplot <- sMCDAresws
+        
+        # create a temp folder for shp files
+        temp_shp <- tempdir()
+        
+        # write shp files
+        st_write(dataplot, paste0(temp_shp,"/map_result_weightedsum.shp"), append=FALSE)
+        
+        # zip all the shp files
+        zip_file <- file.path(temp_shp, paste0("/map_result_weightedsum.zip"))
+        shp_files <- list.files(temp_shp,
+                                paste0("map_result_weightedsum"),
+                                full.names = TRUE)
+        # the following zip method works for me in linux but substitute with whatever method working in your OS 
+        zip_command <- paste("zip -j", 
+                             zip_file, 
+                             paste(shp_files, collapse = " "))
+        system(zip_command)
+        # copy the zip file to the file argument
+        file.copy(zip_file, file)
+        # remove all the files created
+        file.remove(zip_file, shp_files)
+        removeModal()
+        remove_modal_spinner()
+        
+      }
+    )
+    
+    # Download button for histogram
+    output$downloadWSHist <- renderUI(
+      if(input$MCDAhistws > 0)  downloadButton('download_WShist', label = 'Download Histogram')
+    )
+    
+    output$download_WShist <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/hist_result_weightedsum_",Sys.Date(),".png")
+      },
+      content = function(file) {
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        png(file, width = 900,height = 300)
+        print(histWSexp$dat)
+        dev.off()
+        remove_modal_spinner()
+      }
+    )
     
   })
   
@@ -785,6 +891,80 @@ server <- function(input, output, session){
   #
   # Data Preparation Page
   #
+  
+  # If Input from file, open the csv or xlsx file containing the information
+  in.class.file <- reactive({
+    
+    inFile <- input$fileClassInfo # rename input for code simplicity 
+    
+    req(inFile) # This is used instead of # if(is.null(inFile))
+    if(regexpr("\\.xlsx",inFile$datapath) != -1){
+      
+      read.xlsx(inFile$datapath)
+      
+    } else {
+      
+      read.csv(inFile$datapath)
+    }
+    
+  })
+  
+  # Show input data when the file input is selected
+  output$classinfo <- renderDT(
+    datatable(in.class.file(), 
+              editable = TRUE,
+              rownames = FALSE,
+              selection = 'none',
+              extensions = 'Buttons', 
+              options = list(
+                dom = 'Bfrtip',
+                buttons =
+                  list('copy', 'print', list(
+                    extend = 'collection',
+                    buttons = c('csv', 'excel', 'pdf'),
+                    text = 'Download'
+                  ))
+              )
+    )
+  )
+  
+  # If Input from file, open the csv or xlsx file containing the information
+  in.thr.file <- reactive({
+    
+    inFile <- input$fileThrInfo # rename input for code simplicity 
+    
+    req(inFile) # This is used instead of # if(is.null(inFile))
+    if(regexpr("\\.xlsx",inFile$datapath) != -1){
+      
+      read.xlsx(inFile$datapath)
+      
+    } else {
+      
+      read.csv(inFile$datapath)
+    }
+    
+  })
+  
+  # Show input data when the file input is selected
+  output$thrinfo <- renderDT(
+    datatable(in.thr.file(), 
+              editable = TRUE,
+              rownames = FALSE,
+              selection = 'none',
+              extensions = 'Buttons', 
+              options = list(
+                dom = 'Bfrtip',
+                buttons =
+                  list('copy', 'print', list(
+                    extend = 'collection',
+                    buttons = c('csv', 'excel', 'pdf'),
+                    text = 'Download'
+                  ))
+              )
+    )
+  )
+  
+  
   # Select number classes for the analysis
   observeEvent(input$nmbclassout,{
     
@@ -820,12 +1000,13 @@ server <- function(input, output, session){
       } 
     }
     
-  }, ignoreNULL = TRUE, ignoreInit = TRUE
+  }, ignoreNULL = TRUE, ignoreInit = TRUE # Added to avoid the app crashing if no inputs given after deleting a previous value
   
   )
   
   # Save indifference thresholds
   profMat <- reactive({
+    
     if(input$nmbclassout == 2){
       unlist(
         lapply(1:numCriteria(), function(i) {
@@ -860,11 +1041,12 @@ server <- function(input, output, session){
   })
   
   # Save indifference thresholds
-  indifthr <- reactive({unlist(
-    lapply(1:numCriteria(), function(i) {
-      input[[paste0("indif_",i)]]
-    }
-    ))
+  indifthr <- reactive({
+    unlist(
+      lapply(1:numCriteria(), function(i) {
+        input[[paste0("indif_",i)]]
+      }
+      ))
   })
   
   # Generate the dynamic Preference Thresholds input for each selected criteria
@@ -879,11 +1061,12 @@ server <- function(input, output, session){
   })
   
   # Save preference thresholds
-  prefthr <- reactive({unlist(
-    lapply(1:numCriteria(), function(i) {
-      input[[paste0("pref_",i)]]
-    }
-    ))
+  prefthr <- reactive({
+    unlist(
+      lapply(1:numCriteria(), function(i) {
+        input[[paste0("pref_",i)]]
+      }
+      ))
   })
   
   # Generate the dynamic Preference Thresholds input for each selected criteria
@@ -898,11 +1081,12 @@ server <- function(input, output, session){
   })
   
   # Save veto thresholds
-  vetothr <- reactive({unlist(
-    lapply(1:numCriteria(), function(i) {
-      input[[paste0("veto_",i)]]
-    }
-    ))
+  vetothr <- reactive({
+    unlist(
+      lapply(1:numCriteria(), function(i) {
+        input[[paste0("veto_",i)]]
+      }
+      ))
   })
   
   #
@@ -943,6 +1127,10 @@ server <- function(input, output, session){
     updateNumericInput(session, "MCrunsOut", value = input$value)
   )
   
+  # reactiveValues for map and histogram download
+  mapOutexp <- reactiveValues(dat = 0)
+  histOutexp <- reactiveValues(dat = 0)
+  
   # Calculate the Electre-Tri sMCDA
   observeEvent(input$sMCDAout, {
     
@@ -960,22 +1148,19 @@ server <- function(input, output, session){
       out.weights <- NULL
     }
     
+    
     # Check number of Runs
     if(input$MCrunsout != 1){
       
-      print(input$MCrunsout)
-      print(inMCDAmat())
-      print(t(profMat()))
-      print(input$lambda/100)
-      print(out.weights)
-      
+      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
       # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
       sMCDAresout <- sMCDAunccritOut(input$MCrunsout,nature(),alternatives(),geom(),polarity(),inMCDAmat(), t(profMat()),indifthr(),prefthr(),vetothr(),input$lambda/100,out.weights,session)
+      remove_modal_spinner()
       
-      print(sMCDAresout)
-      
+      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       # Plot the resulting sMCDA map score
-      output$resmapout <- renderMapview(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score")))
+      output$resmapout <- renderMapview(mapOutexp$dat <- mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score")))
+      remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
       output$reshistout <- renderPlot({
@@ -983,7 +1168,8 @@ server <- function(input, output, session){
         if (input$MCDAhistOut > 0) {
           
           inphist <- sMCDAresout %>% st_drop_geometry()
-          ggplot() +
+          show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+          histOutexp$dat <- ggplot() +
             geom_bar(aes(x=inphist[,1],y=inphist[,2]),
                      stat="identity", width=0.5,color="red",fill="red") +
             geom_errorbar(aes(x=inphist[,1], ymin=pmax(inphist[,2]-inphist[,3],0), ymax=pmin(inphist[,2]+inphist[,3], 1)), width=.2) +
@@ -995,20 +1181,23 @@ server <- function(input, output, session){
                   axis.title=element_text(size=22,face="bold"),
                   axis.ticks=element_line(size = 1.2,colour = "black"),
                   legend.position="none")
+          remove_modal_spinner()
+          histOutexp$dat
         }
         
       }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
       
-      
     } else {
       
+      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
       # Calculate the sMCDA results using an Electre-TRI method
       sMCDAresout <- sMCDAallexactcritOut(alternatives(),geom(),polarity(), inMCDAmat(), t(profMat()),indifthr(), prefthr(), vetothr(), input$lambda/100,out.weights)
+      remove_modal_spinner()
       
-      print(sMCDAresout)
-      
+      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       # Plot the resulting sMCDA map score
-      output$resmapout <- renderMapview(mapview(sMCDAresout[,2],layer.name = c("sMCDA Score")))
+      output$resmapout <- renderMapview(mapOutexp$dat <- mapview(sMCDAresout[,2],layer.name = c("sMCDA Score")))
+      remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
       output$reshistout <- renderPlot({
@@ -1016,7 +1205,8 @@ server <- function(input, output, session){
         if (input$MCDAhistOut > 0) {
           
           inphist <- sMCDAresout %>% st_drop_geometry()
-          ggplot() +
+          show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+          histOutexp$dat <- ggplot() +
             geom_bar(aes(x=inphist[,1],y=inphist[,2]),
                      stat="identity", width=0.5,color="red",fill="red") +
             xlab("Alternative") + ylab("sMCDA Score") +
@@ -1027,11 +1217,127 @@ server <- function(input, output, session){
                   axis.title=element_text(size=22,face="bold"),
                   axis.ticks=element_line(size = 1.2,colour = "black"),
                   legend.position="none")
+          remove_modal_spinner()
+          histOutexp$dat
         }
         
       }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
       
     }
+    
+    # Download map
+    output$downloadOutMap <- renderUI(
+      actionButton("download_Outmap", "Download Map", icon = icon("download"))
+    )
+    
+    # Open Modal on button click
+    observeEvent(input$download_Outmap,
+                 ignoreInit = TRUE,
+                 ignoreNULL = TRUE,   # Show modal on start up
+                 showModal(myDownloadImagesOutRes())
+    )
+    
+    output$download_out_png <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_outranking_",Sys.Date(),".png")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        mapshot(mapOutexp$dat,
+                file = file,
+                remove_controls = c("zoomControl", "layersControl")
+        )
+        removeModal()
+        remove_modal_spinner()
+      }
+    )
+    output$download_out_jpg <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_outranking_",Sys.Date(),".jpg")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        mapshot(mapOutexp$dat,
+                file = file,
+                remove_controls = c("zoomControl", "layersControl")
+        )
+        removeModal()
+        remove_modal_spinner()
+      }
+    )
+    output$download_out_csv <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_outranking_",Sys.Date(),".csv")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        write.csv(sMCDAresout %>% st_drop_geometry(),file,row.names = FALSE)
+        removeModal()
+        remove_modal_spinner()
+      }
+    )
+    output$download_out_xlsx <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_outranking_",Sys.Date(),".xlsx")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        write.xlsx(sMCDAresout %>% st_drop_geometry(),file)
+        removeModal()
+        remove_modal_spinner()
+      }
+    )
+    output$download_out_shp <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/map_result_outranking.zip")
+      },
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        dataplot <- sMCDAresout
+        
+        # create a temp folder for shp files
+        temp_shp <- tempdir()
+        
+        # write shp files
+        st_write(dataplot, paste0(temp_shp,"/map_result_outranking.shp"), append=FALSE)
+        
+        # zip all the shp files
+        zip_file <- file.path(temp_shp, paste0("/map_result_outranking.zip"))
+        shp_files <- list.files(temp_shp,
+                                paste0("map_result_outranking"),
+                                full.names = TRUE)
+        # the following zip method works for me in linux but substitute with whatever method working in your OS 
+        zip_command <- paste("zip -j", 
+                             zip_file, 
+                             paste(shp_files, collapse = " "))
+        system(zip_command)
+        # copy the zip file to the file argument
+        file.copy(zip_file, file)
+        # remove all the files created
+        file.remove(zip_file, shp_files)
+        removeModal()
+        remove_modal_spinner()
+        
+      }
+    )
+    
+    # Download button for histogram
+    output$downloadOutHist <- renderUI(
+      if(input$MCDAhistOut > 0)  downloadButton('download_Outhist', label = 'Download Histogram')
+    )
+    
+    output$download_Outhist <- downloadHandler(
+      filename = function(){
+        paste0(getwd(),"/hist_result_outranking_",Sys.Date(),".png")
+      },
+      content = function(file) {
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        png(file, width = 900,height = 300)
+        print(histOutexp$dat)
+        dev.off()
+        remove_modal_spinner()
+      }
+    )
     
   })
 }

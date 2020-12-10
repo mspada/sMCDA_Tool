@@ -3,6 +3,7 @@
 ########################################################
 library(shiny)
 library(shinydashboard)
+library(shinybusy)
 library(openxlsx)
 library(tidyverse)
 library(DT)
@@ -11,7 +12,6 @@ library(mapview)
 library(ggplot2)
 library(doParallel)
 library(foreach)
-# library(doFuture)
 
 ###################################################
 ################ Global Options ###################
@@ -26,14 +26,10 @@ options(shiny.maxRequestSize=100*1024^2)
 
 # Set common options for mapview
 mapviewOptions(legend.pos = "bottomright",
-               layers.control.pos = "topleft",
+               layers.control.pos = "topright",
                basemaps = c("CartoDB.Positron", "OpenStreetMap", "OpenTopoMap"),
                homebutton = FALSE,
                fgb = FALSE)
-
-# For progress bar in the parallel analysis
-# registerDoFuture()
-# plan(multisession)
 
 # Dashboard global header for the sMCDA tool
 dbHeader <- dashboardHeader(title = "sMCDA Tool",
@@ -53,7 +49,6 @@ dbHeader <- dashboardHeader(title = "sMCDA Tool",
                                       icon("power-off"),
                                       title = "Logout"),
                                     class = "dropdown"))
-
 
 ###################################################
 ######## Marginal Distributions Generator #########
@@ -163,16 +158,11 @@ sMCDAunccritWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
   force(g)
   force(inMat)
   
-  # withProgress(message = 'Calculation in progress...',
-  #             value = 0, {
-  #   
   # Run Monte-Carlo in parallel over numCores cores
   res <- foreach (icount(N), .combine=rbind, .multicombine=TRUE, 
                   .packages = c("tidyverse", "shiny"), 
                   .export = c("margdist","normminmax","weightsdist","weightedsum")) %dopar% { 
                     
-                    # incProgress(1/N, session = session)
-                    # 
                     #get matrix with values to be normalized (exact and random values for non-exact criteria)
                     i=1 # for input matrix
                     k=1 # for criteria and pol vectors
@@ -222,7 +212,6 @@ sMCDAunccritWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
                     # Weighted Sum
                     res.minmax.ws <- weightedsum(norm.cri.minmax,w)
                   }
-  # })
   
   ###################
   # Result
@@ -267,6 +256,16 @@ sMCDAallexactcritOut <- function(alt,g,pol, inMat, profMat,indif, pref, veto, l,
   # - veto, input veto thresholds
   # - l, input lambda
   # - wgt, weighted scheme
+  
+  force(alt)
+  force(pol)
+  force(g)
+  force(inMat)
+  force(profMat)
+  force(indif)
+  force(pref)
+  force(veto)
+  force(l)
   
   res.electre <- electretri(inMat,profMat,pol,wgt,indif,pref,veto, l)
   
@@ -324,16 +323,14 @@ sMCDAunccritOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,
   force(indif)
   force(pref)
   force(veto)
+  force(l)
   
-  # withProgress(message = 'Calculation in progress...',
-  #             value = 0, {
-  #   
   # Run Monte-Carlo in parallel over numCores cores
   res.electre <- foreach (icount(N), .combine=rbind, .multicombine=TRUE, 
                           .packages = c("tidyverse", "shiny"), 
                           .export = c("margdist","weightsdist","electretri")) %dopar% { 
                             
-                            #get matrix with values to be normalized (exact and random values for non-exact criteria)
+                            # Get matrix with values to be normalized (exact and random values for non-exact criteria)
                             i=1 # for input matrix
                             k=1 # for criteria and pol vectors
                             orgmat <- inMat[,1]
@@ -679,4 +676,48 @@ electretri <- function (performanceMatrix, profiles,minmaxcriteria, criteriaWeig
   }
   
   return(Optimistic)
+}
+
+#####################################
+## Modal Download Button Functions ##
+#####################################
+
+# Function to download WS resulting map
+myDownloadImagesWSRes <- function() {
+  div(id = "downloadImageWSRes",
+      modalDialog(downloadButton("download_ws_png","Download png"),
+                  br(),
+                  br(),
+                  downloadButton("download_ws_jpg","Download jpg"),
+                  br(),
+                  br(),
+                  downloadButton("download_ws_csv","Download csv"),
+                  br(),
+                  br(),
+                  downloadButton("download_ws_xlsx","Download xlsx"),
+                  br(),
+                  br(),
+                  downloadButton("download_ws_shp","Download shapefile"),
+                  easyClose = TRUE, title = "Download Image")
+  )
+}
+
+# Function to download Out resulting map
+myDownloadImagesOutRes <- function() {
+  div(id = "downloadImageOutRes",
+      modalDialog(downloadButton("download_out_png","Download png"),
+                  br(),
+                  br(),
+                  downloadButton("download_out_jpg","Download jpg"),
+                  br(),
+                  br(),
+                  downloadButton("download_out_csv","Download csv"),
+                  br(),
+                  br(),
+                  downloadButton("download_out_xlsx","Download xlsx"),
+                  br(),
+                  br(),
+                  downloadButton("download_out_shp","Download shapefile"),
+                  easyClose = TRUE, title = "Download Image")
+  )
 }
