@@ -237,14 +237,14 @@ server <- function(input, output, session){
     
     req(inFile) # This is used instead of # if(is.null(inFile))
     
+    show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
     # Need to do this, since *.shp files could not be read alone, also the other files need to be read in at the same time
     dir <- dirname(inFile[1,4])
     
     for ( i in 1:nrow(inFile)) {
       file.rename(inFile[i,4], paste0(dir,"/",inFile[i,1]))}
-    getshp <- list.files(dir, pattern="*.shp", full.names=TRUE)
     
-    show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+    getshp <- list.files(dir, pattern="*.shp", full.names=TRUE)
     shpfile <- st_read(getshp)
     remove_modal_spinner()
     shpfile
@@ -273,7 +273,7 @@ server <- function(input, output, session){
   # Show input data when the radio button "Table" is selected (this is the default)
   output$datatab <- renderDT(
     datatable(data(),
-              editable = "cell",
+              editable = FALSE,
               rownames = FALSE,
               selection = 'none',
               extensions = 'Buttons', 
@@ -366,7 +366,6 @@ server <- function(input, output, session){
         downloadButton("download_map", "Download Image", icon = icon("download")) 
       } 
     )
-    
     output$download_map <- downloadHandler(
       filename = function(){
         paste0(getwd(),"/map_",input$layers,"_",Sys.Date(),".png")
@@ -412,7 +411,7 @@ server <- function(input, output, session){
   # Show input data when the file input is selected
   output$critinfo <- renderDT(
     datatable(in.crit.file(), 
-              editable = TRUE,
+              editable = FALSE,
               rownames = FALSE,
               selection = 'none',
               extensions = 'Buttons', 
@@ -899,80 +898,6 @@ server <- function(input, output, session){
   #
   # Data Preparation Page
   #
-  
-  # If Input from file, open the csv or xlsx file containing the information
-  in.class.file <- reactive({
-    
-    inFile <- input$fileClassInfo # rename input for code simplicity 
-    
-    req(inFile) # This is used instead of # if(is.null(inFile))
-    if(regexpr("\\.xlsx",inFile$datapath) != -1){
-      
-      read.xlsx(inFile$datapath)
-      
-    } else {
-      
-      read.csv(inFile$datapath)
-    }
-    
-  })
-  
-  # Show input data when the file input is selected
-  output$classinfo <- renderDT(
-    datatable(in.class.file(), 
-              editable = TRUE,
-              rownames = FALSE,
-              selection = 'none',
-              extensions = 'Buttons', 
-              options = list(
-                dom = 'Bfrtip',
-                buttons =
-                  list('copy', 'print', list(
-                    extend = 'collection',
-                    buttons = c('csv', 'excel', 'pdf'),
-                    text = 'Download'
-                  ))
-              )
-    )
-  )
-  
-  # If Input from file, open the csv or xlsx file containing the information
-  in.thr.file <- reactive({
-    
-    inFile <- input$fileThrInfo # rename input for code simplicity 
-    
-    req(inFile) # This is used instead of # if(is.null(inFile))
-    if(regexpr("\\.xlsx",inFile$datapath) != -1){
-      
-      read.xlsx(inFile$datapath)
-      
-    } else {
-      
-      read.csv(inFile$datapath)
-    }
-    
-  })
-  
-  # Show input data when the file input is selected
-  output$thrinfo <- renderDT(
-    datatable(in.thr.file(), 
-              editable = TRUE,
-              rownames = FALSE,
-              selection = 'none',
-              extensions = 'Buttons', 
-              options = list(
-                dom = 'Bfrtip',
-                buttons =
-                  list('copy', 'print', list(
-                    extend = 'collection',
-                    buttons = c('csv', 'excel', 'pdf'),
-                    text = 'Download'
-                  ))
-              )
-    )
-  )
-  
-  
   # Select number classes for the analysis
   observeEvent(input$nmbclassout,{
     
