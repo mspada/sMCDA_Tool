@@ -17,6 +17,11 @@ library(foreach)
 ################ Global Options ###################
 ###################################################
 
+# Check the presence of phantomjs used to download the maps
+if (is.null(suppressMessages(webshot:::find_phantom()))) { 
+  webshot::install_phantomjs() 
+  }
+
 # Allow shiny to open large files, now set to 100 MB
 options(shiny.maxRequestSize=100*1024^2)
 # Remember: ID at 1st column and Alternatives Names at the second column always!!!!

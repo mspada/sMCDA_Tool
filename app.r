@@ -242,9 +242,12 @@ server <- function(input, output, session){
     
     for ( i in 1:nrow(inFile)) {
       file.rename(inFile[i,4], paste0(dir,"/",inFile[i,1]))}
-    
     getshp <- list.files(dir, pattern="*.shp", full.names=TRUE)
-    st_read(getshp)
+    
+    show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+    shpfile <- st_read(getshp)
+    remove_modal_spinner()
+    shpfile
   })
   
   #
@@ -323,7 +326,7 @@ server <- function(input, output, session){
               axis.ticks=element_line(size = 1.2,colour = "black"),
               legend.position="none")
       remove_modal_spinner()
-      histexp$dat
+      show(histexp$dat)
     }
     
   }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
@@ -390,14 +393,19 @@ server <- function(input, output, session){
     inFile <- input$fileCritInfo # rename input for code simplicity 
     
     req(inFile) # This is used instead of # if(is.null(inFile))
+    
+    show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
     if(regexpr("\\.xlsx",inFile$datapath) != -1){
       
-      read.xlsx(inFile$datapath)
+      critfile <- read.xlsx(inFile$datapath)
       
     } else {
       
-      read.csv(inFile$datapath)
+      critfile <- read.csv(inFile$datapath)
     }
+    remove_modal_spinner()
+    
+    critfile
     
   })
   
@@ -725,7 +733,7 @@ server <- function(input, output, session){
                   axis.ticks=element_line(size = 1.2,colour = "black"),
                   legend.position="none")
           remove_modal_spinner()
-          histWSexp$dat
+          show(histWSexp$dat)
         }
         
       }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
@@ -761,7 +769,7 @@ server <- function(input, output, session){
                   axis.ticks=element_line(size = 1.2,colour = "black"),
                   legend.position="none")
           remove_modal_spinner()
-          histWSexp$dat
+          show(histWSexp$dat)
         }
         
       }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
@@ -1169,7 +1177,7 @@ server <- function(input, output, session){
           
           inphist <- sMCDAresout %>% st_drop_geometry()
           show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-          histOutexp$dat <- ggplot() +
+          show(histOutexp$dat) <- ggplot() +
             geom_bar(aes(x=inphist[,1],y=inphist[,2]),
                      stat="identity", width=0.5,color="red",fill="red") +
             geom_errorbar(aes(x=inphist[,1], ymin=pmax(inphist[,2]-inphist[,3],0), ymax=pmin(inphist[,2]+inphist[,3], 1)), width=.2) +
@@ -1182,7 +1190,7 @@ server <- function(input, output, session){
                   axis.ticks=element_line(size = 1.2,colour = "black"),
                   legend.position="none")
           remove_modal_spinner()
-          histOutexp$dat
+          show(histOutexp$dat)
         }
         
       }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
@@ -1218,7 +1226,7 @@ server <- function(input, output, session){
                   axis.ticks=element_line(size = 1.2,colour = "black"),
                   legend.position="none")
           remove_modal_spinner()
-          histOutexp$dat
+          show(histOutexp$dat)
         }
         
       }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked

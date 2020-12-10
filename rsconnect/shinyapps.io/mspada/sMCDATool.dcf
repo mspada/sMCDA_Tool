@@ -1,0 +1,12 @@
+name: sMCDATool
+title: sMCDATool
+username:
+account: mspada
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3384338
+bundleId: 3971336
+url: https://mspada.shinyapps.io/sMCDATool/
+when: 1607615490.08878
+asMultiple: FALSE
+asStatic: FALSE
