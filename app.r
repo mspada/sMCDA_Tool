@@ -353,10 +353,11 @@ server <- function(input, output, session){
   # Plot the layer under interest when the radioButton "Map" is selected
   mapexp <- reactiveValues(dat = 0)
   
-  observeEvent(input$layers,{
-    indt <- data() %>% select(input$layers) %>% st_set_geometry(geom())
+  observeEvent(input$layers, {
     show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+    indt <- data() %>% select(input$layers) %>% st_set_geometry(geom())
     output$mapplot <- renderMapview(mapexp$dat <- mapview(indt,layer.name = input$layers))
+    Sys.sleep(5)
     remove_modal_spinner()
     
     # Download button for map
@@ -380,7 +381,7 @@ server <- function(input, output, session){
         remove_modal_spinner()
       }
     )
-  })
+  }, ignoreInit=TRUE)
   
   ##########################################
   ######## Criteria Selection Page #########
@@ -671,7 +672,7 @@ server <- function(input, output, session){
                         value = (input[[paste0("tradeoff_",i)]]/totslider)*100
       )})
     
-  })
+  }, ignoreInit = TRUE)
   
   # Select number of Monte-Carlo Runs, default is 1, i.e. no MC.
   observe(
@@ -705,11 +706,10 @@ server <- function(input, output, session){
       show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
       # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
       sMCDAresws <- sMCDAunccritWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
-      remove_modal_spinner()
       
-      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       # Plot the resulting sMCDA map score
       output$resmapws <- renderMapview(mapWSexp$dat <- mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score")))
+      Sys.sleep(5)
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -742,11 +742,10 @@ server <- function(input, output, session){
       show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
       # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
       sMCDAresws <- sMCDAallexactcritWS(alternatives(),geom(),inMCDAmat(),polarity(),ws.weights)
-      remove_modal_spinner()
       
-      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       # Plot the resulting sMCDA map score
       output$resmapws <- renderMapview(mapWSexp$dat <- mapview(sMCDAresws[,2],layer.name = c("sMCDA Score")))
+      Sys.sleep(5)
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -789,7 +788,7 @@ server <- function(input, output, session){
     
     output$download_ws_png <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_weightedsum_",Sys.Date(),".png")
+        paste0("map_result_weightedsum_",Sys.Date(),".png")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -803,7 +802,7 @@ server <- function(input, output, session){
     )
     output$download_ws_jpg <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_weightedsum_",Sys.Date(),".jpg")
+        paste0("map_result_weightedsum_",Sys.Date(),".jpg")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -817,7 +816,7 @@ server <- function(input, output, session){
     )
     output$download_ws_csv <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_weightedsum_",Sys.Date(),".csv")
+        paste0("map_result_weightedsum_",Sys.Date(),".csv")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -828,7 +827,7 @@ server <- function(input, output, session){
     )
     output$download_ws_xlsx <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_weightedsum_",Sys.Date(),".xlsx")
+        paste0("map_result_weightedsum_",Sys.Date(),".xlsx")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -839,7 +838,7 @@ server <- function(input, output, session){
     )
     output$download_ws_shp <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_weightedsum.zip")
+        paste0("map_result_weightedsum.zip")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -878,7 +877,7 @@ server <- function(input, output, session){
     
     output$download_WShist <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/hist_result_weightedsum_",Sys.Date(),".png")
+        paste0("hist_result_weightedsum_",Sys.Date(),".png")
       },
       content = function(file) {
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -889,7 +888,7 @@ server <- function(input, output, session){
       }
     )
     
-  })
+  }, ignoreInit = TRUE)
   
   ##########################################
   ########## Outranking Approach ###########
@@ -899,7 +898,7 @@ server <- function(input, output, session){
   # Data Preparation Page
   #
   # Select number classes for the analysis
-  observeEvent(input$nmbclassout,{
+  observeEvent(input$nmbclassout, {
     
     if(!is.na(input$nmbclassout)) {
       
@@ -1053,7 +1052,7 @@ server <- function(input, output, session){
                         paste0("weight_",i),
                         value = (input[[paste0("weight_",i)]]/totsliderOut)*100
       )})
-  })
+  },  ignoreInit = TRUE)
   
   # Select number of Monte-Carlo Runs, default is 1, i.e. no MC.
   observe(
@@ -1088,11 +1087,10 @@ server <- function(input, output, session){
       show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
       # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
       sMCDAresout <- sMCDAunccritOut(input$MCrunsout,nature(),alternatives(),geom(),polarity(),inMCDAmat(), t(profMat()),indifthr(),prefthr(),vetothr(),input$lambda/100,out.weights,session)
-      remove_modal_spinner()
       
-      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       # Plot the resulting sMCDA map score
       output$resmapout <- renderMapview(mapOutexp$dat <- mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score")))
+      Sys.sleep(5)
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -1102,7 +1100,7 @@ server <- function(input, output, session){
           
           inphist <- sMCDAresout %>% st_drop_geometry()
           show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-          show(histOutexp$dat) <- ggplot() +
+          histOutexp$dat <- ggplot() +
             geom_bar(aes(x=inphist[,1],y=inphist[,2]),
                      stat="identity", width=0.5,color="red",fill="red") +
             geom_errorbar(aes(x=inphist[,1], ymin=pmax(inphist[,2]-inphist[,3],0), ymax=pmin(inphist[,2]+inphist[,3], 1)), width=.2) +
@@ -1125,11 +1123,10 @@ server <- function(input, output, session){
       show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
       # Calculate the sMCDA results using an Electre-TRI method
       sMCDAresout <- sMCDAallexactcritOut(alternatives(),geom(),polarity(), inMCDAmat(), t(profMat()),indifthr(), prefthr(), vetothr(), input$lambda/100,out.weights)
-      remove_modal_spinner()
       
-      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
       # Plot the resulting sMCDA map score
       output$resmapout <- renderMapview(mapOutexp$dat <- mapview(sMCDAresout[,2],layer.name = c("sMCDA Score")))
+      Sys.sleep(5)
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -1172,7 +1169,7 @@ server <- function(input, output, session){
     
     output$download_out_png <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_outranking_",Sys.Date(),".png")
+        paste0("map_result_outranking_",Sys.Date(),".png")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -1186,7 +1183,7 @@ server <- function(input, output, session){
     )
     output$download_out_jpg <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_outranking_",Sys.Date(),".jpg")
+        paste0("map_result_outranking_",Sys.Date(),".jpg")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -1200,7 +1197,7 @@ server <- function(input, output, session){
     )
     output$download_out_csv <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_outranking_",Sys.Date(),".csv")
+        paste0("map_result_outranking_",Sys.Date(),".csv")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -1211,7 +1208,7 @@ server <- function(input, output, session){
     )
     output$download_out_xlsx <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_outranking_",Sys.Date(),".xlsx")
+        paste0("map_result_outranking_",Sys.Date(),".xlsx")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -1222,7 +1219,7 @@ server <- function(input, output, session){
     )
     output$download_out_shp <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_result_outranking.zip")
+        paste0("map_result_outranking.zip")
       },
       content = function(file){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -1261,7 +1258,7 @@ server <- function(input, output, session){
     
     output$download_Outhist <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/hist_result_outranking_",Sys.Date(),".png")
+        paste0("hist_result_outranking_",Sys.Date(),".png")
       },
       content = function(file) {
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -1272,7 +1269,7 @@ server <- function(input, output, session){
       }
     )
     
-  })
+  }, ignoreInit = TRUE)
 }
 
 shinyApp(ui, server)
