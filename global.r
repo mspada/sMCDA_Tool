@@ -12,6 +12,7 @@ library(mapview)
 library(ggplot2)
 library(doParallel)
 library(foreach)
+library(leaflet)
 
 ###################################################
 ################ Global Options ###################
@@ -20,7 +21,7 @@ library(foreach)
 # Check the presence of phantomjs used to download the maps
 if (is.null(suppressMessages(webshot:::find_phantom()))) { 
   webshot::install_phantomjs() 
-  }
+}
 
 # Allow shiny to open large files, now set to 100 MB
 options(shiny.maxRequestSize=100*1024^2)

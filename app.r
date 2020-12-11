@@ -68,7 +68,7 @@ ui <- dashboardPage(
                                        
                            ),
                            checkboxInput('hist', "Show Histogram", FALSE),
-                           mapviewOutput("mapplot", height = "600px"),
+                           leafletOutput("mapplot", height = "600px"),
                            uiOutput("downloadInMap"),
                            plotOutput("histogram"),
                            uiOutput("downloadInHist")
@@ -120,7 +120,7 @@ ui <- dashboardPage(
                   column(3,
                          h1("Weighted Sum"),
                          wellPanel(
-                           radioButtons("wSelBtnWS", "Select Weight Profile:", choices = c("Sample Weights" = "SWws", "Input Weights" = "IWws")),  
+                           radioButtons("wSelBtnWS", "Select Weight Profile:", choices = c("Sample Weights" = "SWws", "Input Weights" = "IWws"), selected = "SWws"),  
                          ),
                          conditionalPanel(
                            condition = "input.wSelBtnWS == 'IWws'", # Input weight profiles manually only when "Input Weights" is selected
@@ -137,7 +137,7 @@ ui <- dashboardPage(
                          conditionalPanel(
                            condition = "input.sMCDAws == TRUE", # Generate the result panel only once the "Perform sMCDA" button is clicked
                            checkboxInput('MCDAhistws', "Show Histogram", FALSE),
-                           mapviewOutput("resmapws", height = "600px"),
+                           leafletOutput("resmapws", height = "600px"),
                            uiOutput("downloadWSMap"),
                            plotOutput("reshistws"),
                            uiOutput("downloadWSHist")
@@ -200,7 +200,7 @@ ui <- dashboardPage(
                                            conditionalPanel(
                                              condition = "input.sMCDAout == TRUE", # Generate the result panel only once the "Perform sMCDA" button is clicked
                                              checkboxInput('MCDAhistOut', "Show Histogram", FALSE),
-                                             mapviewOutput("resmapout", height = "600px"),
+                                             leafletOutput("resmapout", height = "600px"),
                                              uiOutput("downloadOutMap"),
                                              plotOutput("reshistout"),
                                              uiOutput("downloadOutHist")
@@ -355,8 +355,8 @@ server <- function(input, output, session){
   
   observeEvent(input$layers, {
     show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-    indt <- data() %>% select(input$layers) %>% st_set_geometry(geom())
-    output$mapplot <- renderMapview(mapexp$dat <- mapview(indt,layer.name = input$layers))
+    indt <- data() %>% select(all_of(input$layers)) %>% st_set_geometry(geom())
+    output$mapplot <- renderLeaflet(mapexp$dat <- mapview:::removeZoomControl(mapview(indt,layer.name = input$layers)@map))
     Sys.sleep(5)
     remove_modal_spinner()
     
@@ -376,7 +376,7 @@ server <- function(input, output, session){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
         mapshot(mapexp$dat,
                 file = file,
-                remove_controls = c("zoomControl", "layersControl")
+                remove_controls = c("layersControl")
         )
         remove_modal_spinner()
       }
@@ -672,7 +672,7 @@ server <- function(input, output, session){
                         value = (input[[paste0("tradeoff_",i)]]/totslider)*100
       )})
     
-  }, ignoreInit = TRUE)
+  }, ignoreInit = TRUE, ignoreNULL = TRUE)
   
   # Select number of Monte-Carlo Runs, default is 1, i.e. no MC.
   observe(
@@ -708,7 +708,7 @@ server <- function(input, output, session){
       sMCDAresws <- sMCDAunccritWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
       
       # Plot the resulting sMCDA map score
-      output$resmapws <- renderMapview(mapWSexp$dat <- mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score")))
+      output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score"))@map))
       Sys.sleep(5)
       remove_modal_spinner()
       
@@ -744,7 +744,7 @@ server <- function(input, output, session){
       sMCDAresws <- sMCDAallexactcritWS(alternatives(),geom(),inMCDAmat(),polarity(),ws.weights)
       
       # Plot the resulting sMCDA map score
-      output$resmapws <- renderMapview(mapWSexp$dat <- mapview(sMCDAresws[,2],layer.name = c("sMCDA Score")))
+      output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("sMCDA Score"))@map))
       Sys.sleep(5)
       remove_modal_spinner()
       
@@ -794,7 +794,7 @@ server <- function(input, output, session){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
         mapshot(mapWSexp$dat,
                 file = file,
-                remove_controls = c("zoomControl", "layersControl")
+                remove_controls = c("layersControl")
         )
         removeModal()
         remove_modal_spinner()
@@ -808,7 +808,7 @@ server <- function(input, output, session){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
         mapshot(mapWSexp$dat,
                 file = file,
-                remove_controls = c("zoomControl", "layersControl")
+                remove_controls = c("layersControl")
         )
         removeModal()
         remove_modal_spinner()
@@ -888,7 +888,7 @@ server <- function(input, output, session){
       }
     )
     
-  }, ignoreInit = TRUE)
+  }, ignoreInit = TRUE, ignoreNULL = TRUE)
   
   ##########################################
   ########## Outranking Approach ###########
@@ -1052,7 +1052,7 @@ server <- function(input, output, session){
                         paste0("weight_",i),
                         value = (input[[paste0("weight_",i)]]/totsliderOut)*100
       )})
-  },  ignoreInit = TRUE)
+  },  ignoreInit = TRUE, ignoreNULL = TRUE)
   
   # Select number of Monte-Carlo Runs, default is 1, i.e. no MC.
   observe(
@@ -1089,7 +1089,7 @@ server <- function(input, output, session){
       sMCDAresout <- sMCDAunccritOut(input$MCrunsout,nature(),alternatives(),geom(),polarity(),inMCDAmat(), t(profMat()),indifthr(),prefthr(),vetothr(),input$lambda/100,out.weights,session)
       
       # Plot the resulting sMCDA map score
-      output$resmapout <- renderMapview(mapOutexp$dat <- mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score")))
+      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"))@map))
       Sys.sleep(5)
       remove_modal_spinner()
       
@@ -1125,7 +1125,7 @@ server <- function(input, output, session){
       sMCDAresout <- sMCDAallexactcritOut(alternatives(),geom(),polarity(), inMCDAmat(), t(profMat()),indifthr(), prefthr(), vetothr(), input$lambda/100,out.weights)
       
       # Plot the resulting sMCDA map score
-      output$resmapout <- renderMapview(mapOutexp$dat <- mapview(sMCDAresout[,2],layer.name = c("sMCDA Score")))
+      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("sMCDA Score"))@map))
       Sys.sleep(5)
       remove_modal_spinner()
       
@@ -1175,7 +1175,7 @@ server <- function(input, output, session){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
         mapshot(mapOutexp$dat,
                 file = file,
-                remove_controls = c("zoomControl", "layersControl")
+                remove_controls = c("layersControl")
         )
         removeModal()
         remove_modal_spinner()
@@ -1189,7 +1189,7 @@ server <- function(input, output, session){
         show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
         mapshot(mapOutexp$dat,
                 file = file,
-                remove_controls = c("zoomControl", "layersControl")
+                remove_controls = c("layersControl")
         )
         removeModal()
         remove_modal_spinner()
@@ -1269,7 +1269,7 @@ server <- function(input, output, session){
       }
     )
     
-  }, ignoreInit = TRUE)
+  }, ignoreInit = TRUE, ignoreNULL = TRUE)
 }
 
-shinyApp(ui, server)
+shinyApp(ui = ui, server = server)
