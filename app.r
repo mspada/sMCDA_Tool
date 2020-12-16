@@ -1,20 +1,4 @@
-# TO DO
-# 
-# Priorities:
-#   Input Data Table, WS, Outranking: 
-#     - Colorbars
-# 
-#   Outranking:
-#     - Solve problem with hiding stuffs
-#
-#   About Page
-#
-# Later: 
-#   - Login Page
-#   - When updating the table is not updating the underline reactive data.frame
-#   - When changing Table allow to download new shp in input data page
-#   - Plot both Mean and SD Layer map --> Do it with Dropdown Selection?
-
+# Call the global functions file
 source("global.r")
 
 ###########################################
@@ -82,7 +66,6 @@ ui <- dashboardPage(
                   )
                   
                 )
-                
               )
       ),
       # Generate the Criteria Selection and Elaboration Tab
@@ -119,8 +102,8 @@ ui <- dashboardPage(
                 fluidRow(
                   column(3,
                          h1("Weighted Sum"),
-                         wellPanel(
-                           radioButtons("wSelBtnWS", "Select Weight Profile:", choices = c("Sample Weights" = "SWws", "Input Weights" = "IWws"), selected = "SWws"),  
+                         wellPanel( 
+                           radioButtons("wSelBtnWS", "Select Weight Profile:", choices = c("Sample Weights" = "SWws", "Input Weights" = "IWws"), selected = "SWws"), 
                          ),
                          conditionalPanel(
                            condition = "input.wSelBtnWS == 'IWws'", # Input weight profiles manually only when "Input Weights" is selected
@@ -152,59 +135,59 @@ ui <- dashboardPage(
       #Generate the Outranking Method Tab
       tabItem("outranking",
               navbarPage("Outranking Approach", id = "nav",
-                         tabPanel("Input Data Preparation",
+                         tabPanel("Input Data Preparation", 
                                   fluidPage(
-                                    wellPanel(
-                                      numericInput("nmbclassout", "Insert the number of classes of interest:", NULL)
+                                    fluidRow(
+                                      radioButtons("SelBtnClass", "Select Class Input Information:", choices = c("Input from File" = "FileClass", "Manual Input" = "ManualClass"), selected = "FileClass")
                                     ),
-                                    uiOutput("classout")
+                                    fluidRow(
+                                      uiOutput("selectedClassPanel")
+                                    )
                                   )
                          ),
                          tabPanel("Thresholds",
                                   fluidPage(
-                                    column(4,
-                                           h4("Select Indifference Thresholds"),
-                                           uiOutput("indthrout")
+                                    fluidRow(
+                                      radioButtons("SelBtnThr", "Select Threshold Input Information:", choices = c("Input From File" = "FileThr", "Manual Input" = "ManualThr"), selected = "FileThr")
                                     ),
-                                    column(4,
-                                           h4("Select Preference Thresholds"),
-                                           uiOutput("prefthrout")
-                                    ),
-                                    column(4,
-                                           h4("Select Veto Thresholds"),
-                                           uiOutput("vetothrout")
+                                    fluidRow(
+                                      uiOutput("selectedThrPanel")
                                     )
                                   )
-                                  
                          ),
                          tabPanel("Simulation & Results",
                                   fluidPage(
-                                    column(3,
-                                           wellPanel(
-                                             radioButtons("outSelBtn", "Select Weight Profile:", choices = c("Sample Weights" = "SWout", "Input Weights" = "IWout")),  
-                                           ),
-                                           conditionalPanel(
-                                             condition = "input.outSelBtn == 'IWout'", # Input weight profiles manually only when "Input Weights" is selected
-                                             uiOutput("outrankingsli"),
-                                             actionButton("updateOutSli", "Update Weigths") 
-                                           )
-                                    ),
-                                    column(2,
-                                           p(""),
-                                           sliderInput("lambda", label = h3("Input Decision Maker strongness:"), min = 0,
-                                                       max = 100, value = c(51, 85)),
-                                           numericInput("MCrunsout", "Input Monte-Carlo runs", 1),
-                                           actionButton("sMCDAout","Perform sMCDA")
-                                    ),
-                                    column(7,
-                                           conditionalPanel(
-                                             condition = "input.sMCDAout == TRUE", # Generate the result panel only once the "Perform sMCDA" button is clicked
-                                             checkboxInput('MCDAhistOut', "Show Histogram", FALSE),
-                                             leafletOutput("resmapout", height = "600px"),
-                                             uiOutput("downloadOutMap"),
-                                             plotOutput("reshistout"),
-                                             uiOutput("downloadOutHist")
-                                           )
+                                    fluidRow(
+                                      column(3,
+                                             fluidPage(
+                                               fluidRow(
+                                                 radioButtons("outSelBtn", "Select Weight Profile:", choices = c("Sample Weights" = "SWout", "Input Weights" = "IWout")),  
+                                               ),
+                                               fluidRow(
+                                                 uiOutput("outrankingsli")
+                                               ),
+                                               fluidRow(
+                                                 uiOutput("outrankingActBtn")
+                                               )
+                                             )
+                                      ),
+                                      column(2,
+                                             p(""),
+                                             sliderInput("lambda", label = h3("Input Decision Maker strongness:"), min = 0, 
+                                                         max = 100, value = c(51, 85)),
+                                             numericInput("MCrunsout", "Input Monte-Carlo runs", 1),
+                                             actionButton("sMCDAout","Perform sMCDA")
+                                      ),
+                                      column(7,
+                                             conditionalPanel(
+                                               condition = "input.sMCDAout == TRUE", # Generate the result panel only once the "Perform sMCDA" button is clicked
+                                               checkboxInput('MCDAhistOut', "Show Histogram", FALSE),
+                                               leafletOutput("resmapout", height = "600px"),
+                                               uiOutput("downloadOutMap"),
+                                               plotOutput("reshistout"),
+                                               uiOutput("downloadOutHist")
+                                             )
+                                      )
                                     )
                                   )
                          )
@@ -223,7 +206,6 @@ ui <- dashboardPage(
 
 server <- function(input, output, session){
   
-  
   ##########################################
   ############ Input Data Page #############
   ##########################################
@@ -238,13 +220,16 @@ server <- function(input, output, session){
     req(inFile) # This is used instead of # if(is.null(inFile))
     
     show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+    
     # Need to do this, since *.shp files could not be read alone, also the other files need to be read in at the same time
     dir <- dirname(inFile[1,4])
     
     for ( i in 1:nrow(inFile)) {
-      file.rename(inFile[i,4], paste0(dir,"/",inFile[i,1]))}
+      file.rename(inFile[i,4], paste0(dir,"/",inFile[i,1]))
+    }
     
     getshp <- list.files(dir, pattern="*.shp", full.names=TRUE)
+    
     shpfile <- st_read(getshp)
     remove_modal_spinner()
     shpfile
@@ -253,6 +238,7 @@ server <- function(input, output, session){
   #
   # Plot and Table section
   #
+  
   # Collect the dataset without spatial geometry
   data <- reactive({
     in.data.file() %>% st_drop_geometry()
@@ -339,7 +325,7 @@ server <- function(input, output, session){
   
   output$download_hist <- downloadHandler(
     filename = function(){
-      paste0(getwd(),"/hist_",input$layers,"_",Sys.Date(),".png")
+      paste0("hist_",input$layers,"_",SSys.Date(),".png")
     },
     content = function(file) {
       show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
@@ -353,11 +339,10 @@ server <- function(input, output, session){
   # Plot the layer under interest when the radioButton "Map" is selected
   mapexp <- reactiveValues(dat = 0)
   
-  observeEvent(input$layers, {
+  observeEvent(input$layers,{
     show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
     indt <- data() %>% select(all_of(input$layers)) %>% st_set_geometry(geom())
     output$mapplot <- renderLeaflet(mapexp$dat <- mapview:::removeZoomControl(mapview(indt,layer.name = input$layers)@map))
-    Sys.sleep(5)
     remove_modal_spinner()
     
     # Download button for map
@@ -367,9 +352,10 @@ server <- function(input, output, session){
         downloadButton("download_map", "Download Image", icon = icon("download")) 
       } 
     )
+    
     output$download_map <- downloadHandler(
       filename = function(){
-        paste0(getwd(),"/map_",input$layers,"_",Sys.Date(),".png")
+        paste0("map_",input$layers,"_",Sys.Date(),".png")
       },
       contentType = c("image/png"),
       content = function(file){
@@ -393,7 +379,6 @@ server <- function(input, output, session){
     inFile <- input$fileCritInfo # rename input for code simplicity 
     
     req(inFile) # This is used instead of # if(is.null(inFile))
-    
     show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
     if(regexpr("\\.xlsx",inFile$datapath) != -1){
       
@@ -404,9 +389,7 @@ server <- function(input, output, session){
       critfile <- read.csv(inFile$datapath)
     }
     remove_modal_spinner()
-    
     critfile
-    
   })
   
   # Show input data when the file input is selected
@@ -456,128 +439,133 @@ server <- function(input, output, session){
   })
   
   # Collect total number of criteria
-  numCriteria <- reactive(length(critnames()))
+  numCriteria <- reactive(
+    length(critnames())
+  )
   
   # Select inputs for further analysis, i.e. criteria information like polarity, behavior (exact or type of distribution), etc.
   # Automatically rendering the page based on the selection of criteria
   output$unccrit <- renderUI({
-    fluidPage(
-      fluidRow(
-        
-        # First Column, based on the number of selected criteria create a drop-down menu to select the polarity of each criteria
-        column(width = 3,
-               lapply(1:numCriteria(), function(i) {
-                 list(
-                   selectInput(paste0('polarity_',i),
-                               paste0('Select Polarity of ', critnames()[i]),
-                               choices = c("",
-                                           "Positive" = "+", 
-                                           "Negative" = "-")
+    if(numCriteria() > 0){ # Start rendering if and only if at least 1 cretaria has been selected
+      
+      fluidPage(
+        fluidRow(
+          
+          # First Column, based on the number of selected criteria create a drop-down menu to select the polarity of each criteria
+          column(width = 3,
+                 lapply(1:numCriteria(), function(i) {
+                   list(
+                     selectInput(paste0('polarity_',i),
+                                 paste0('Select Polarity of ', critnames()[i]),
+                                 choices = c("",
+                                             "Positive" = "+", 
+                                             "Negative" = "-")
+                     )
                    )
-                 )
-               })
-        ),
-        
-        # Second Column, based on the number of selected criteria create a drop-down menu to select the nature (exact or a distribution type) of each criteria
-        column(width = 3,
-               lapply(1:numCriteria(), function(i) {
+                 })
+          ),
+          
+          # Second Column, based on the number of selected criteria create a drop-down menu to select the nature (exact or a distribution type) of each criteria
+          column(width = 3,
+                 lapply(1:numCriteria(), function(i) {
+                   
+                   list(
+                     selectInput(paste0('nature_',i),
+                                 paste0('Select nature of ', critnames()[i]),
+                                 choices = c("",
+                                             "Exact" = "exact",
+                                             "Uniform" = "unif",
+                                             "Normal" = "norm",
+                                             "Lognormal" = "logno",
+                                             "Poisson" = "pois"
+                                 )
+                     )  
+                   )
+                 })
+          ),
+          
+          # Third Column, based on the number of selected criteria create a set of drop-down menu to select the criteria in the input data.frame. 
+          # If exact or Poisson, only one parameter is needed (i.e. only one drop-down menu is created), 
+          # while for uniform, normal and log-normal distributions two drop-down menu are generated one close to the other to select the parameters
+          # of interest from the input data.frame.
+          column(width = 6,
+                 lapply(1:numCriteria(), function(i) {
+                   list(
+                     
+                     # Exact Criteria Input
+                     conditionalPanel(
+                       condition = paste0("input.nature_",i, "== 'exact'"),
+                       selectInput(paste0('exact_',i),
+                                   label = "Select Layer",
+                                   choices = c("",names(layers()))
+                       )
+                     ),
+                     
+                     # Criteria Input distributed uniformly
+                     conditionalPanel(
+                       condition = paste0("input.nature_",i, "== 'unif'"),
+                       splitLayout(cellWidths = c("50%", "50%"), # Split the column to generate two drop-down menu
+                                   selectInput(paste0('unif_min_',i),
+                                               label = "Select Layer for Min Unif",
+                                               choices = c("",names(layers()))
+                                   ), 
+                                   selectInput(paste0('unif_max_',i),
+                                               label = "Select Layer for Max Unif",
+                                               choices = c("",names(layers()))
+                                   )
+                       )
+                       
+                     ),
+                     
+                     # Criteria Input distributed normally
+                     conditionalPanel(
+                       condition = paste0("input.nature_",i, "== 'norm'"),
+                       splitLayout(cellWidths = c("50%", "50%"), # Split the column to generate two drop-down menu  
+                                   selectInput(paste0('norm_mean_',i),
+                                               label = "Select Layer for Normal Mean",
+                                               choices = c("",names(layers()))
+                                   ), 
+                                   selectInput(paste0('norm_sd_',i),
+                                               label = "Select Layer for Normal SD",
+                                               choices = c("",names(layers()))
+                                   )
+                       )
+                       
+                     ),
+                     
+                     # Criteria Input distributed log-normally
+                     conditionalPanel(
+                       condition = paste0("input.nature_",i, "== 'logno'"),
+                       splitLayout(cellWidths = c("50%", "50%"), # Split the column to generate two drop-down menu
+                                   selectInput(paste0('logno_mean_',i),
+                                               label = "Select Layer for LogNormal Mean",
+                                               choices = c("",names(layers()))
+                                   ), 
+                                   selectInput(paste0('logno_sd_',i),
+                                               label = "Select Layer for LogNormal SD",
+                                               choices = c("",names(layers()))
+                                   )
+                       )
+                       
+                     ),
+                     
+                     # Criteria Input distributed as a Poisson model
+                     conditionalPanel(
+                       condition = paste0("input.nature_",i, "== 'pois'"),
+                       selectInput(paste0('pois_',i),
+                                   label = "Select Layer for Poisson parameter",
+                                   choices = c("",names(layers()))
+                       )
+                       
+                       
+                     )
+                   )
+                 })
                  
-                 list(
-                   selectInput(paste0('nature_',i),
-                               paste0('Select nature of ', critnames()[i]),
-                               choices = c("",
-                                           "Exact" = "exact",
-                                           "Uniform" = "unif",
-                                           "Normal" = "norm",
-                                           "Lognormal" = "logno",
-                                           "Poisson" = "pois"
-                               )
-                   )  
-                 )
-               })
-        ),
-        
-        # Third Column, based on the number of selected criteria create a set of drop-down menu to select the criteria in the input data.frame. 
-        # If exact or Poisson, only one parameter is needed (i.e. only one drop-down menu is created), 
-        # while for uniform, normal and log-normal distributions two drop-down menu are generated one close to the other to select the parameters
-        # of interest from the input data.frame.
-        column(width = 6,
-               lapply(1:numCriteria(), function(i) {
-                 list(
-                   
-                   # Exact Criteria Input
-                   conditionalPanel(
-                     condition = paste0("input.nature_",i, "== 'exact'"),
-                     selectInput(paste0('exact_',i),
-                                 label = "Select Layer",
-                                 choices = c("",names(layers()))
-                     )
-                   ),
-                   
-                   # Criteria Input distributed uniformly
-                   conditionalPanel(
-                     condition = paste0("input.nature_",i, "== 'unif'"),
-                     splitLayout(cellWidths = c("50%", "50%"), # Split the column to generate two drop-down menu
-                                 selectInput(paste0('unif_min_',i),
-                                             label = "Select Layer for Min Unif",
-                                             choices = c("",names(layers()))
-                                 ), 
-                                 selectInput(paste0('unif_max_',i),
-                                             label = "Select Layer for Max Unif",
-                                             choices = c("",names(layers()))
-                                 )
-                     )
-                     
-                   ),
-                   
-                   # Criteria Input distributed normally
-                   conditionalPanel(
-                     condition = paste0("input.nature_",i, "== 'norm'"),
-                     splitLayout(cellWidths = c("50%", "50%"), # Split the column to generate two drop-down menu  
-                                 selectInput(paste0('norm_mean_',i),
-                                             label = "Select Layer for Normal Mean",
-                                             choices = c("",names(layers()))
-                                 ), 
-                                 selectInput(paste0('norm_sd_',i),
-                                             label = "Select Layer for Normal SD",
-                                             choices = c("",names(layers()))
-                                 )
-                     )
-                     
-                   ),
-                   
-                   # Criteria Input distributed log-normally
-                   conditionalPanel(
-                     condition = paste0("input.nature_",i, "== 'logno'"),
-                     splitLayout(cellWidths = c("50%", "50%"), # Split the column to generate two drop-down menu
-                                 selectInput(paste0('logno_mean_',i),
-                                             label = "Select Layer for LogNormal Mean",
-                                             choices = c("",names(layers()))
-                                 ), 
-                                 selectInput(paste0('logno_sd_',i),
-                                             label = "Select Layer for LogNormal SD",
-                                             choices = c("",names(layers()))
-                                 )
-                     )
-                     
-                   ),
-                   
-                   # Criteria Input distributed as a Poisson model
-                   conditionalPanel(
-                     condition = paste0("input.nature_",i, "== 'pois'"),
-                     selectInput(paste0('pois_',i),
-                                 label = "Select Layer for Poisson parameter",
-                                 choices = c("",names(layers()))
-                     )
-                     
-                     
-                   )
-                 )
-               })
-               
+          )
         )
-      )
-    )
+      )      
+    }
     
   })
   
@@ -708,8 +696,7 @@ server <- function(input, output, session){
       sMCDAresws <- sMCDAunccritWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
       
       # Plot the resulting sMCDA map score
-      output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score"))@map))
-      Sys.sleep(5)
+      output$resmapws <-renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score"))@map))
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -745,7 +732,6 @@ server <- function(input, output, session){
       
       # Plot the resulting sMCDA map score
       output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("sMCDA Score"))@map))
-      Sys.sleep(5)
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -897,8 +883,71 @@ server <- function(input, output, session){
   #
   # Data Preparation Page
   #
+  
+  observe({
+    if (input$SelBtnClass == 'ManualClass'){
+      output$selectedClassPanel <- renderUI(
+        fluidRow(
+          # Insert number of classes manually
+          numericInput("nmbclassout", "Insert the number of classes of interest:", NULL),
+          # Call UI rendering for the manual input of the profiles values
+          uiOutput("classout")
+        )
+      )
+    } else if(input$SelBtnClass == 'FileClass'){
+      output$selectedClassPanel <- renderUI(
+        fluidRow(
+          # Input file
+          fileInput("fileClassInfo", NULL, 
+                    buttonLabel = "Upload...", 
+                    accept=c(".csv", ".xlsx"),
+                    multiple = FALSE),
+          
+          # Show input data when the file input is selected
+          renderDT(
+            datatable(in.class.file(), 
+                      editable = FALSE,
+                      rownames = FALSE,
+                      selection = 'none',
+                      extensions = 'Buttons', 
+                      options = list(
+                        dom = 'Bfrtip',
+                        scrollX = TRUE,
+                        buttons =
+                          list('copy', 'print', list(
+                            extend = 'collection',
+                            buttons = c('csv', 'excel', 'pdf'),
+                            text = 'Download'
+                          ))
+                      )
+            )
+          )
+        )
+        
+      )
+    }
+  })
+  
+  # If Input from file, open the csv or xlsx file containing the information
+  in.class.file <- reactive({
+    
+    inFile <- input$fileClassInfo # rename input for code simplicity 
+    
+    req(inFile) # This is used instead of # if(is.null(inFile))
+    if(regexpr("\\.xlsx",inFile$datapath) != -1){
+      
+      read.xlsx(inFile$datapath)
+      
+    } else {
+      
+      read.csv(inFile$datapath)
+    }
+    
+  })
+  
+  
   # Select number classes for the analysis
-  observeEvent(input$nmbclassout, {
+  observeEvent(input$nmbclassout,{
     
     if(!is.na(input$nmbclassout)) {
       
@@ -929,30 +978,33 @@ server <- function(input, output, session){
           })
         })
         
-      } 
+      }
     }
     
   }, ignoreNULL = TRUE, ignoreInit = TRUE # Added to avoid the app crashing if no inputs given after deleting a previous value
   
   )
   
-  # Save indifference thresholds
+  # Save profile classes
   profMat <- reactive({
-    
-    if(input$nmbclassout == 2){
-      unlist(
-        lapply(1:numCriteria(), function(i) {
-          input[[paste0("class_",i)]]
-        }
-        ))
-    } else if(input$nmbclassout > 2) {
-      nmbclass <- input$nmbclassout - 1
-      listcrit <- lapply(1:numCriteria(), function(i) {
-        lapply(1:nmbclass, function(j) {
-          input[[paste0("crit",i,"class_",j)]]
+    if(input$SelBtnClass == 'ManualClass'){ # If manual input is selected
+      if(input$nmbclassout == 2){
+        unlist(
+          lapply(1:numCriteria(), function(i) {
+            input[[paste0("class_",i)]]
+          }
+          ))
+      } else if(input$nmbclassout > 2) {
+        nmbclass <- input$nmbclassout - 1
+        listcrit <- lapply(1:numCriteria(), function(i) {
+          lapply(1:nmbclass, function(j) {
+            input[[paste0("crit",i,"class_",j)]]
+          })
         })
-      })
-      do.call(rbind,listcrit)
+        do.call(rbind,listcrit)
+      }
+    } else {
+      t(as.matrix(in.class.file()))
     }
     
   })
@@ -960,6 +1012,75 @@ server <- function(input, output, session){
   #
   # Thresholds Page
   #
+  
+  observe({
+    if (input$SelBtnThr == 'ManualThr'){ # If Manual Input render the manual entries
+      output$selectedThrPanel <- renderUI(
+        fluidPage(
+          column(4,
+                 h4("Select Indifference Thresholds"),
+                 uiOutput("indthrout")
+          ),
+          column(4,
+                 h4("Select Preference Thresholds"),
+                 uiOutput("prefthrout")
+          ),
+          column(4,
+                 h4("Select Veto Thresholds"),
+                 uiOutput("vetothrout")
+          )
+        )
+      )
+    } else if(input$SelBtnThr == 'FileThr'){ # If input file browse and select the file containing the thresholds
+      output$selectedThrPanel <- renderUI(
+        fluidRow(
+          # Input file
+          fileInput("fileThrInfo", NULL, 
+                    buttonLabel = "Upload...", 
+                    accept=c(".csv", ".xlsx"),
+                    multiple = FALSE),
+          
+          # Show input data when the file input is selected
+          renderDT(
+            datatable(in.thr.file(), 
+                      editable = FALSE,
+                      rownames = FALSE,
+                      selection = 'none',
+                      extensions = 'Buttons', 
+                      options = list(
+                        dom = 'Bfrtip',
+                        scrollX = TRUE,
+                        buttons =
+                          list('copy', 'print', list(
+                            extend = 'collection',
+                            buttons = c('csv', 'excel', 'pdf'),
+                            text = 'Download'
+                          ))
+                      )
+            )
+          )
+        )
+        
+      )
+    }
+  })
+  
+  # If Input from file, open the csv or xlsx file containing the information
+  in.thr.file <- reactive({
+    
+    inFile <- input$fileThrInfo # rename input for code simplicity 
+    
+    req(inFile) # This is used instead of # if(is.null(inFile))
+    if(regexpr("\\.xlsx",inFile$datapath) != -1){
+      
+      read.xlsx(inFile$datapath)
+      
+    } else {
+      
+      read.csv(inFile$datapath)
+    }
+    
+  })
   
   # Generate the dynamic Indifference Thresholds input for each selected criteria
   output$indthrout <- renderUI({
@@ -974,11 +1095,16 @@ server <- function(input, output, session){
   
   # Save indifference thresholds
   indifthr <- reactive({
-    unlist(
-      lapply(1:numCriteria(), function(i) {
-        input[[paste0("indif_",i)]]
-      }
-      ))
+    if(input$SelBtnThr == 'ManualThr'){ # If manual input is selected
+      unlist(
+        lapply(1:numCriteria(), function(i) {
+          input[[paste0("indif_",i)]]
+        }
+        ))
+    } else {
+      tmp <- in.thr.file() %>% select(Indifference)
+      tmp$Indifference
+    }
   })
   
   # Generate the dynamic Preference Thresholds input for each selected criteria
@@ -994,11 +1120,16 @@ server <- function(input, output, session){
   
   # Save preference thresholds
   prefthr <- reactive({
-    unlist(
-      lapply(1:numCriteria(), function(i) {
-        input[[paste0("pref_",i)]]
-      }
-      ))
+    if(input$SelBtnThr == 'ManualThr'){ # If manual input is selected
+      unlist(
+        lapply(1:numCriteria(), function(i) {
+          input[[paste0("pref_",i)]]
+        }
+        ))
+    } else {
+      tmp <- in.thr.file() %>% select(Preference)
+      tmp$Preference
+    }
   })
   
   # Generate the dynamic Preference Thresholds input for each selected criteria
@@ -1014,30 +1145,41 @@ server <- function(input, output, session){
   
   # Save veto thresholds
   vetothr <- reactive({
-    unlist(
-      lapply(1:numCriteria(), function(i) {
-        input[[paste0("veto_",i)]]
-      }
-      ))
+    if(input$SelBtnThr == 'ManualThr'){ # If manual input is selected
+      unlist(
+        lapply(1:numCriteria(), function(i) {
+          input[[paste0("veto_",i)]]
+        }
+        ))
+    } else {
+      tmp <- in.thr.file() %>% select(Veto)
+      tmp$Veto
+    }
   })
   
   #
   # Simulation & Results Page
   #
   
-  # Generate sliders for weighted sum dynamically based on the number of criteria
-  output$outrankingsli <- renderUI({
-    lapply(1:numCriteria(), function(i) {
-      sliderInput(
-        paste0("weight_",i),
-        paste0('Select the Weight (%) for ', critnames()[i]),
-        min = 0,
-        max = 100,
-        value = 100/numCriteria(),
-        step = 1,
-        post = "%")
-    })
-    
+  observe({
+    # Generate sliders for weighted sum dynamically based on the number of criteria
+    if (input$outSelBtn == 'IWout'){ # If input weight profile
+      output$outrankingsli <- renderUI({
+        lapply(1:numCriteria(), function(i) {
+          sliderInput(
+            paste0("weight_",i),
+            paste0('Select the Weight (%) for ', critnames()[i]),
+            min = 0,
+            max = 100,
+            value = 100/numCriteria(),
+            step = 1,
+            post = "%")
+        })
+      })
+      output$outrankingActBtn <- renderUI({
+        actionButton("updateOutSli", "Update Weigths")
+      })
+    } 
   })
   
   # Update the slider based on the input from the user
@@ -1052,7 +1194,7 @@ server <- function(input, output, session){
                         paste0("weight_",i),
                         value = (input[[paste0("weight_",i)]]/totsliderOut)*100
       )})
-  },  ignoreInit = TRUE, ignoreNULL = TRUE)
+  })
   
   # Select number of Monte-Carlo Runs, default is 1, i.e. no MC.
   observe(
@@ -1090,7 +1232,6 @@ server <- function(input, output, session){
       
       # Plot the resulting sMCDA map score
       output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"))@map))
-      Sys.sleep(5)
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -1125,8 +1266,7 @@ server <- function(input, output, session){
       sMCDAresout <- sMCDAallexactcritOut(alternatives(),geom(),polarity(), inMCDAmat(), t(profMat()),indifthr(), prefthr(), vetothr(), input$lambda/100,out.weights)
       
       # Plot the resulting sMCDA map score
-      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("sMCDA Score"))@map))
-      Sys.sleep(5)
+      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"))@map))
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -1272,4 +1412,4 @@ server <- function(input, output, session){
   }, ignoreInit = TRUE, ignoreNULL = TRUE)
 }
 
-shinyApp(ui = ui, server = server)
+shinyApp(ui, server)
