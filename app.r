@@ -1,4 +1,3 @@
-# Call the global functions file
 source("global.r")
 
 ###########################################
@@ -54,8 +53,7 @@ ui <- dashboardPage(
                            checkboxInput('hist', "Show Histogram", FALSE),
                            leafletOutput("mapplot", height = "600px"),
                            uiOutput("downloadInMap"),
-                           plotOutput("histogram"),
-                           uiOutput("downloadInHist")
+                           plotlyOutput("histogram"),
                          )
                   )
                 ),
@@ -122,8 +120,7 @@ ui <- dashboardPage(
                            checkboxInput('MCDAhistws', "Show Histogram", FALSE),
                            leafletOutput("resmapws", height = "600px"),
                            uiOutput("downloadWSMap"),
-                           plotOutput("reshistws"),
-                           uiOutput("downloadWSHist")
+                           plotlyOutput("reshistws"),
                          )
                   )
                   
@@ -184,8 +181,7 @@ ui <- dashboardPage(
                                                checkboxInput('MCDAhistOut', "Show Histogram", FALSE),
                                                leafletOutput("resmapout", height = "600px"),
                                                uiOutput("downloadOutMap"),
-                                               plotOutput("reshistout"),
-                                               uiOutput("downloadOutHist")
+                                               plotlyOutput("reshistout")
                                              )
                                       )
                                     )
@@ -295,46 +291,16 @@ server <- function(input, output, session){
   
   # Render the histogram of the selected Criteria if the "Show Histogram" is checked
   histexp <- reactiveValues(dat = 0)
-  output$histogram <- renderPlot({
+  output$histogram <- renderPlotly({
     if (input$hist > 0) {
       
       inphist <- data()
-      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-      histexp$dat <- ggplot() +
-        geom_bar(aes(x=inphist[,1],y=inphist[,input$layers]), # In the corrected version use inphist[,2] for x
-                 stat="identity", width=0.5,color="black",fill="black") +
-        xlab("Alternative") + ylab(input$layers) +
-        theme_set(theme_bw(base_size = 20)) +
-        theme(panel.border=element_rect(size=1.2, colour = "black"),
-              panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank(),
-              axis.title=element_text(size=22,face="bold"),
-              axis.ticks=element_line(size = 1.2,colour = "black"),
-              legend.position="none")
-      remove_modal_spinner()
-      show(histexp$dat)
+      fig <- plot_ly(x = inphist[,1],y = inphist[,input$layers],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
+        layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
+        config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+      fig
     }
-    
-  }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
-  
-  # Download button for histogram
-  output$downloadInHist <- renderUI(
-    if(input$hist > 0)  downloadButton("download_hist", "Download Histogram", icon = icon("download"))
-  )
-  
-  
-  output$download_hist <- downloadHandler(
-    filename = function(){
-      paste0("hist_",input$layers,"_",SSys.Date(),".png")
-    },
-    content = function(file) {
-      show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-      png(file, width = 900,height = 300)
-      print(histexp$dat)
-      dev.off()
-      remove_modal_spinner()
-    }
-  )
+  }) 
   
   # Plot the layer under interest when the radioButton "Map" is selected
   mapexp <- reactiveValues(dat = 0)
@@ -700,29 +666,16 @@ server <- function(input, output, session){
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
-      output$reshistws <- renderPlot({
-        
+      output$reshistws <- renderPlotly({
         if (input$MCDAhistws > 0) {
           
           inphist <- sMCDAresws %>% st_drop_geometry()
-          show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-          histWSexp$dat <- ggplot() +
-            geom_bar(aes(x=inphist[,1],y=inphist[,2]),
-                     stat="identity", width=0.5,color="red",fill="red") +
-            geom_errorbar(aes(x=inphist[,1], ymin=pmax(inphist[,2]-inphist[,3],0), ymax=pmin(inphist[,2]+inphist[,3],1)), width=.2) +
-            xlab("Alternative") + ylab("sMCDA Score") +
-            theme_set(theme_bw(base_size = 20)) +
-            theme(panel.border=element_rect(size=1.2, colour = "black"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  axis.title=element_text(size=22,face="bold"),
-                  axis.ticks=element_line(size = 1.2,colour = "black"),
-                  legend.position="none")
-          remove_modal_spinner()
-          show(histWSexp$dat)
+          fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
+            config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+          fig
         }
-        
-      }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
+      }) 
       
     } else {
       
@@ -735,29 +688,16 @@ server <- function(input, output, session){
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
-      output$reshistws <- renderPlot({
-        
+      output$reshistws <- renderPlotly({
         if (input$MCDAhistws > 0) {
           
           inphist <- sMCDAresws %>% st_drop_geometry()
-          show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-          histWSexp$dat <- ggplot() +
-            geom_bar(aes(x=inphist[,1],y=inphist[,2]),
-                     stat="identity", width=0.5,color="red",fill="red") +
-            xlab("Alternative") + ylab("sMCDA Score") +
-            theme_set(theme_bw(base_size = 20)) +
-            theme(panel.border=element_rect(size=1.2, colour = "black"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  axis.title=element_text(size=22,face="bold"),
-                  axis.ticks=element_line(size = 1.2,colour = "black"),
-                  legend.position="none")
-          remove_modal_spinner()
-          show(histWSexp$dat)
+          fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
+            config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+          fig
         }
-        
-      }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
-      
+      }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
     }
     
     # Download  map
@@ -853,24 +793,6 @@ server <- function(input, output, session){
         removeModal()
         remove_modal_spinner()
         
-      }
-    )
-    
-    # Download button for histogram
-    output$downloadWSHist <- renderUI(
-      if(input$MCDAhistws > 0)  downloadButton('download_WShist', label = 'Download Histogram')
-    )
-    
-    output$download_WShist <- downloadHandler(
-      filename = function(){
-        paste0("hist_result_weightedsum_",Sys.Date(),".png")
-      },
-      content = function(file) {
-        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-        png(file, width = 900,height = 300)
-        print(histWSexp$dat)
-        dev.off()
-        remove_modal_spinner()
       }
     )
     
@@ -1235,29 +1157,16 @@ server <- function(input, output, session){
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
-      output$reshistout <- renderPlot({
-        
-        if (input$MCDAhistOut > 0) {
+      output$reshistout <- renderPlotly({
+        if (input$MCDAhistout > 0) {
           
           inphist <- sMCDAresout %>% st_drop_geometry()
-          show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-          histOutexp$dat <- ggplot() +
-            geom_bar(aes(x=inphist[,1],y=inphist[,2]),
-                     stat="identity", width=0.5,color="red",fill="red") +
-            geom_errorbar(aes(x=inphist[,1], ymin=pmax(inphist[,2]-inphist[,3],0), ymax=pmin(inphist[,2]+inphist[,3], 1)), width=.2) +
-            xlab("Alternative") + ylab("sMCDA Score") +
-            theme_set(theme_bw(base_size = 20)) +
-            theme(panel.border=element_rect(size=1.2, colour = "black"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  axis.title=element_text(size=22,face="bold"),
-                  axis.ticks=element_line(size = 1.2,colour = "black"),
-                  legend.position="none")
-          remove_modal_spinner()
-          show(histOutexp$dat)
+          fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
+            config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+          fig
         }
-        
-      }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
+      }) 
       
     } else {
       
@@ -1270,29 +1179,16 @@ server <- function(input, output, session){
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
-      output$reshistout <- renderPlot({
-        
-        if (input$MCDAhistOut > 0) {
+      output$reshistout <- renderPlotly({
+        if (input$MCDAhistout > 0) {
           
           inphist <- sMCDAresout %>% st_drop_geometry()
-          show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-          histOutexp$dat <- ggplot() +
-            geom_bar(aes(x=inphist[,1],y=inphist[,2]),
-                     stat="identity", width=0.5,color="red",fill="red") +
-            xlab("Alternative") + ylab("sMCDA Score") +
-            theme_set(theme_bw(base_size = 20)) +
-            theme(panel.border=element_rect(size=1.2, colour = "black"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  axis.title=element_text(size=22,face="bold"),
-                  axis.ticks=element_line(size = 1.2,colour = "black"),
-                  legend.position="none")
-          remove_modal_spinner()
-          show(histOutexp$dat)
+          fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
+            config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+          fig
         }
-        
-      }, bg="transparent") # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
-      
+      }) 
     }
     
     # Download map
@@ -1388,24 +1284,6 @@ server <- function(input, output, session){
         removeModal()
         remove_modal_spinner()
         
-      }
-    )
-    
-    # Download button for histogram
-    output$downloadOutHist <- renderUI(
-      if(input$MCDAhistOut > 0)  downloadButton('download_Outhist', label = 'Download Histogram')
-    )
-    
-    output$download_Outhist <- downloadHandler(
-      filename = function(){
-        paste0("hist_result_outranking_",Sys.Date(),".png")
-      },
-      content = function(file) {
-        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-        png(file, width = 900,height = 300)
-        print(histOutexp$dat)
-        dev.off()
-        remove_modal_spinner()
       }
     )
     

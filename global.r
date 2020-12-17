@@ -13,6 +13,8 @@ library(ggplot2)
 library(doParallel)
 library(foreach)
 library(leaflet)
+library(RJSONIO)
+library(plotly)
 
 ###################################################
 ################ Global Options ###################
