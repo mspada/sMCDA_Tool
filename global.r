@@ -9,12 +9,13 @@ library(tidyverse)
 library(DT)
 library(sf)
 library(mapview)
-library(ggplot2)
 library(doParallel)
 library(foreach)
 library(leaflet)
 library(RJSONIO)
 library(plotly)
+library(RColorBrewer)
+library(lattice)
 
 ###################################################
 ################ Global Options ###################
@@ -29,8 +30,10 @@ if (is.null(suppressMessages(webshot:::find_phantom()))) {
 options(shiny.maxRequestSize=100*1024^2)
 # Remember: ID at 1st column and Alternatives Names at the second column always!!!!
 
-# Color palette for mapview
-#colors <- reactive({brewer.pal(10, "RdYlGn")}) # Put in the global.r script
+# Color palette and colorbreaks for mapview 
+mapcol <- brewer.pal(10, "RdYlGn")
+mapcolpal <- colorRampPalette(mapcol)
+at_10 <- do.breaks(endpoints = c(0, 1), nint = 10)
 
 # Set common options for mapview
 mapviewOptions(legend.pos = "bottomright",

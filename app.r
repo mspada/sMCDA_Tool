@@ -234,6 +234,10 @@ server <- function(input, output, session){
   #
   # Plot and Table section
   #
+  # # Show input data when the radio button "Table" is selected (this is the default)
+  # output$datatab <- renderDataTable({
+  #   data() %>% st_drop_geometry() # data() is the input file in the original version, now in.data.file()
+  # })
   
   # Collect the dataset without spatial geometry
   data <- reactive({
@@ -297,7 +301,7 @@ server <- function(input, output, session){
       inphist <- data()
       fig <- plot_ly(x = inphist[,1],y = inphist[,input$layers],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
         layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
-        config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+        config(plot_ly(),toImageButtonOptions= list(format = "png", filename = paste0("hist_",input$layers,"_",Sys.Date()),width = 1000,height =  350))
       fig
     }
   }) 
@@ -662,7 +666,7 @@ server <- function(input, output, session){
       sMCDAresws <- sMCDAunccritWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
       
       # Plot the resulting sMCDA map score
-      output$resmapws <-renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score"))@map))
+      output$resmapws <-renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -671,8 +675,8 @@ server <- function(input, output, session){
           
           inphist <- sMCDAresws %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
-            config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
+            config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_MC_",Sys.Date()) ,width = 1000,height =  350))
           fig
         }
       }) 
@@ -684,7 +688,7 @@ server <- function(input, output, session){
       sMCDAresws <- sMCDAallexactcritWS(alternatives(),geom(),inMCDAmat(),polarity(),ws.weights)
       
       # Plot the resulting sMCDA map score
-      output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("sMCDA Score"))@map))
+      output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -693,8 +697,8 @@ server <- function(input, output, session){
           
           inphist <- sMCDAresws %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
-            config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
+            config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_",Sys.Date()),width = 1000,height =  350))
           fig
         }
       }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
@@ -1153,7 +1157,7 @@ server <- function(input, output, session){
       sMCDAresout <- sMCDAunccritOut(input$MCrunsout,nature(),alternatives(),geom(),polarity(),inMCDAmat(), t(profMat()),indifthr(),prefthr(),vetothr(),input$lambda/100,out.weights,session)
       
       # Plot the resulting sMCDA map score
-      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"))@map))
+      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -1162,8 +1166,8 @@ server <- function(input, output, session){
           
           inphist <- sMCDAresout %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
-            config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
+            config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_outranking_MC_",Sys.Date()),width = 1000,height =  350))
           fig
         }
       }) 
@@ -1175,7 +1179,7 @@ server <- function(input, output, session){
       sMCDAresout <- sMCDAallexactcritOut(alternatives(),geom(),polarity(), inMCDAmat(), t(profMat()),indifthr(), prefthr(), vetothr(), input$lambda/100,out.weights)
       
       # Plot the resulting sMCDA map score
-      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"))@map))
+      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
@@ -1184,8 +1188,8 @@ server <- function(input, output, session){
           
           inphist <- sMCDAresout %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
-            config(plot_ly(),toImageButtonOptions= list(filename = paste0("hist_",input$layers,"_",Sys.Date(),".png"),width = 1000,height =  350))
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
+            config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_outranking_",Sys.Date()),width = 1000,height =  350))
           fig
         }
       }) 
