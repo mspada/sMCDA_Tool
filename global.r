@@ -38,7 +38,7 @@ at_10 <- do.breaks(endpoints = c(0, 1), nint = 10)
 # Set common options for mapview
 mapviewOptions(legend.pos = "bottomright",
                layers.control.pos = "topright",
-               basemaps = c("CartoDB.Positron", "OpenStreetMap", "OpenTopoMap"),
+               basemaps = c("CartoDB.Positron"),#, "OpenStreetMap", "OpenTopoMap"),
                homebutton = FALSE,
                fgb = FALSE)
 

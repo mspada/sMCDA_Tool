@@ -178,7 +178,7 @@ ui <- dashboardPage(
                                       column(7,
                                              conditionalPanel(
                                                condition = "input.sMCDAout == TRUE", # Generate the result panel only once the "Perform sMCDA" button is clicked
-                                               checkboxInput('MCDAhistOut', "Show Histogram", FALSE),
+                                               checkboxInput('sMCDAhistOut', "Show Histogram", FALSE),
                                                leafletOutput("resmapout", height = "600px"),
                                                uiOutput("downloadOutMap"),
                                                plotlyOutput("reshistout")
@@ -262,7 +262,6 @@ server <- function(input, output, session){
               editable = FALSE,
               rownames = FALSE,
               selection = 'none',
-              extensions = 'Buttons', 
               options = list(
                 dom = 'Bfrtip',
                 autoWidth=TRUE,
@@ -361,11 +360,9 @@ server <- function(input, output, session){
     datatable(in.crit.file(), 
               editable = FALSE,
               rownames = FALSE,
-              selection = 'none',
-              extensions = 'Buttons', 
+              selection = 'none', 
               options = list(
                 dom = 'Bfrtip',
-                autoWidth=TRUE,
                 scrollX = TRUE
               )
     )
@@ -825,10 +822,8 @@ server <- function(input, output, session){
                       editable = FALSE,
                       rownames = FALSE,
                       selection = 'none',
-                      extensions = 'Buttons', 
                       options = list(
                         dom = 'Bfrtip',
-                        autoWidth=TRUE,
                         scrollX = TRUE
                       )
             )
@@ -957,10 +952,8 @@ server <- function(input, output, session){
                       editable = FALSE,
                       rownames = FALSE,
                       selection = 'none',
-                      extensions = 'Buttons', 
                       options = list(
                         dom = 'Bfrtip',
-                        autoWidth=TRUE,
                         scrollX = TRUE
                       )
             )
@@ -1133,6 +1126,7 @@ server <- function(input, output, session){
     if(input$MCrunsout != 1){
       
       show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
+      
       # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
       sMCDAresout <- sMCDAunccritOut(input$MCrunsout,nature(),alternatives(),geom(),polarity(),inMCDAmat(), t(profMat()),indifthr(),prefthr(),vetothr(),input$lambda/100,out.weights,session)
       
@@ -1142,9 +1136,9 @@ server <- function(input, output, session){
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
       output$reshistout <- renderPlotly({
-        if (input$MCDAhistout > 0) {
+        if (input$sMCDAhistOut > 0) {
           
-          inphist <- sMCDAresOut %>% st_drop_geometry()
+          inphist <- sMCDAresout %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
             layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
             config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_outranking_MC_",Sys.Date()),width = 1000,height =  350))
@@ -1155,16 +1149,17 @@ server <- function(input, output, session){
     } else {
       
       show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
+      
       # Calculate the sMCDA results using an Electre-TRI method
       sMCDAresout <- sMCDAallexactcritOut(alternatives(),geom(),polarity(), inMCDAmat(), t(profMat()),indifthr(), prefthr(), vetothr(), input$lambda/100,out.weights)
       
       # Plot the resulting sMCDA map score
-      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
+      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
       remove_modal_spinner()
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
       output$reshistout <- renderPlotly({
-        if (input$MCDAhistOut > 0) {
+        if (input$sMCDAhistOut > 0) {
           
           inphist <- sMCDAresout %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
