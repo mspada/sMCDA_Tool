@@ -4,10 +4,11 @@ username:
 account: mspada
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 3384338
-bundleId: 4001140
+appId: 3413195
+bundleId: 4002576
 url: https://mspada.shinyapps.io/sMCDATool/
-when: 1608206906.77878
+when: 1608231097.89547
+lastSyncTime: 1608231097.89548
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .rdata|.RData|.rhistory|.rprofile
+ignoredFiles: .rdata|.RData|.rhistory|.rprofile|.Rprofile

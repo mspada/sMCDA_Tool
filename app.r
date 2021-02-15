@@ -266,13 +266,7 @@ server <- function(input, output, session){
               options = list(
                 dom = 'Bfrtip',
                 autoWidth=TRUE,
-                scrollX = TRUE,
-                buttons =
-                  list('copy', 'print', list(
-                    extend = 'collection',
-                    buttons = c('csv', 'excel', 'pdf'),
-                    text = 'Download'
-                  ))
+                scrollX = TRUE
               )
     )
   )
@@ -371,12 +365,8 @@ server <- function(input, output, session){
               extensions = 'Buttons', 
               options = list(
                 dom = 'Bfrtip',
-                buttons =
-                  list('copy', 'print', list(
-                    extend = 'collection',
-                    buttons = c('csv', 'excel', 'pdf'),
-                    text = 'Download'
-                  ))
+                autoWidth=TRUE,
+                scrollX = TRUE
               )
     )
   )
@@ -838,13 +828,8 @@ server <- function(input, output, session){
                       extensions = 'Buttons', 
                       options = list(
                         dom = 'Bfrtip',
-                        scrollX = TRUE,
-                        buttons =
-                          list('copy', 'print', list(
-                            extend = 'collection',
-                            buttons = c('csv', 'excel', 'pdf'),
-                            text = 'Download'
-                          ))
+                        autoWidth=TRUE,
+                        scrollX = TRUE
                       )
             )
           )
@@ -975,13 +960,8 @@ server <- function(input, output, session){
                       extensions = 'Buttons', 
                       options = list(
                         dom = 'Bfrtip',
-                        scrollX = TRUE,
-                        buttons =
-                          list('copy', 'print', list(
-                            extend = 'collection',
-                            buttons = c('csv', 'excel', 'pdf'),
-                            text = 'Download'
-                          ))
+                        autoWidth=TRUE,
+                        scrollX = TRUE
                       )
             )
           )
@@ -1164,7 +1144,7 @@ server <- function(input, output, session){
       output$reshistout <- renderPlotly({
         if (input$MCDAhistout > 0) {
           
-          inphist <- sMCDAresout %>% st_drop_geometry()
+          inphist <- sMCDAresOut %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
             layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
             config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_outranking_MC_",Sys.Date()),width = 1000,height =  350))
@@ -1184,7 +1164,7 @@ server <- function(input, output, session){
       
       # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
       output$reshistout <- renderPlotly({
-        if (input$MCDAhistout > 0) {
+        if (input$MCDAhistOut > 0) {
           
           inphist <- sMCDAresout %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
