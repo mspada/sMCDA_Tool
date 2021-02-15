@@ -640,7 +640,6 @@ server <- function(input, output, session){
         )
       )
     } else {
-      
       ws.weights <- NULL
     }
     
@@ -664,7 +663,7 @@ server <- function(input, output, session){
             layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
             config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_MC_",Sys.Date()) ,width = 1000,height =  350))
           fig
-        }
+        } 
       }) 
       
     } else {
@@ -686,7 +685,7 @@ server <- function(input, output, session){
             layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
             config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_",Sys.Date()),width = 1000,height =  350))
           fig
-        }
+        } 
       }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
     }
     
