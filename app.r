@@ -17,8 +17,7 @@ ui <- dashboardPage(
       menuItem("Run sMCDA", tabName = "mcda", icon = icon("chart-bar"),
                menuSubItem("Weighted Sum", tabName = "ws", icon = icon("layer-group")),
                menuSubItem("Outranking Approach", tabName = "outranking", icon = icon("layer-group"))
-      ),
-      menuItem("About", tabName = "about", icon = icon("question-circle")) 
+      )
     )
   ),
   dashboardBody(
