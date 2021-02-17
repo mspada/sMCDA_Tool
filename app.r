@@ -233,10 +233,6 @@ server <- function(input, output, session){
   #
   # Plot and Table section
   #
-  # # Show input data when the radio button "Table" is selected (this is the default)
-  # output$datatab <- renderDataTable({
-  #   data() %>% st_drop_geometry() # data() is the input file in the original version, now in.data.file()
-  # })
   
   # Collect the dataset without spatial geometry
   data <- reactive({
@@ -250,8 +246,7 @@ server <- function(input, output, session){
   
   # Collect Alternative names
   alternatives <- reactive({
-    data() %>% select(1)  # Only for CCS test
-    # data() %>% select(2) %>% st_drop_geometry() # Corrected One 
+    data() %>% select(1)
   })
   
   
@@ -263,7 +258,6 @@ server <- function(input, output, session){
               selection = 'none',
               options = list(
                 dom = 'Bfrtip',
-                autoWidth=TRUE,
                 scrollX = TRUE
               )
     )
@@ -275,7 +269,7 @@ server <- function(input, output, session){
   # Generate the Criteria data.frame
   layers <- reactive({
     data() %>% select(-1)
-  }) # Only for CCS test
+  })
   
   # Select Criteria from the data.frame to be used for plot purposes 
   observe({
