@@ -32,7 +32,7 @@ ui <- dashboardPage(
                          h4("Data format: First column for the alternatives and the 
                   remaining columns for the performance of the alternatives on 
                   the criteria. The performances of the alternatives should be 
-                  numerical values. Download a sample file. "),
+                  numerical values."),
                          
                          fileInput("file", NULL, 
                                    buttonLabel = "Upload...", 
@@ -68,7 +68,7 @@ ui <- dashboardPage(
       # Generate the Criteria Selection and Elaboration Tab
       tabItem("criteria",
               fluidPage(
-                h1("Criteria Selection"),
+                h1("Criteria Preparation"),
                 wellPanel(
                   radioButtons("SelBtnCrit", "Select Criteria Input Information:", choices = c("Input From File" = "File", "Manual Input" = "Manual")),  
                 ),
@@ -77,7 +77,7 @@ ui <- dashboardPage(
                   selectInput(
                     "variables",
                     multiple = TRUE,
-                    label = h3("Select Variable"),
+                    label = h3("Select Criteria"),
                     ""
                   ),
                   uiOutput("unccrit")
@@ -326,7 +326,7 @@ server <- function(input, output, session){
   }, ignoreInit=TRUE)
   
   ##########################################
-  ######## Criteria Selection Page #########
+  ###### Criteria Preparation Page #########
   ##########################################
   
   # If Input from file, open the csv or xlsx file containing the information

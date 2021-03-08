@@ -1,0 +1,13 @@
+﻿Names,Polarity,Nature,Layers
+Ind1,-,exact,Ind1
+Ind2,-,unif,Ind2min
+,,,Ind2max
+Ind3,-,unif,Ind3min
+,,,Ind3max
+Ind4,+,unif,Ind4min
+,,,Ind4max
+Ind5,-,unif,Ind5min
+,,,Ind5max
+Ind6,-,unif,Ind6min
+,,,Ind6max
+Ind7,+,exact,Ind7
