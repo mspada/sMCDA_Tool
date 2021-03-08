@@ -1,6 +1,12 @@
 .Rproj.user
 .Rhistory
+.rhistory
 .RData
+.rdata
 .Ruserdata
 packrat/lib*/
 renv.lock
+.rprofile
+.Rprofile
+rsconnect
+sMCDA Tool.Rproj
