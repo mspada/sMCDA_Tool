@@ -9,6 +9,7 @@ library(tidyverse)
 library(DT)
 library(sf)
 library(mapview)
+library(parallel)
 library(doParallel)
 library(foreach)
 library(leaflet)
@@ -104,52 +105,52 @@ margdist <- function(input, margdist){
 
 # This function calculate the sMCDA result for a 
 # set of exact criteria
-sMCDAallexactcritWS <- function(alt, g, inMat, pol, wgt) {
-  
-  # - alt, vector of alternative names
-  # - g, vector of the spatial geometry of each alternative
-  # - inMat, input sMCDA matrix
-  # - pol, vector of the polarity of each alternative
-  # - wgt, weighted scheme
-  
-  ###################
-  # Normalization
-  ###################
-  
-  # min-max
-  norm.cri.minmax <- vector()
-  for (j in 1:length(inMat[1,])){
-    norm.cri.minmax <- cbind(norm.cri.minmax, normminmax(inMat[,j], pol[j]))
-  }
-  
-  ###################
-  # Weights
-  ###################
-  w <- weightsdist(wgt,length(inMat[1,]))
-  
-  ###################
-  # Aggregations
-  ###################
-  
-  # Weighted Sum
-  res.minmax.ws <- weightedsum(norm.cri.minmax,w)
-  
-  ###################
-  # Result
-  ###################
-  
-  # Resulting data.frame.
-  tmpres <-  cbind(alt,res.minmax.ws)
-  # Generate the column names of the resulting matrix
-  colnames(tmpres) <- c("Alternatives", "sMCDA Score")
-  tmpres <- st_set_geometry(tmpres, g)
-  return(tmpres)
-}
+# sMCDAallexactcritWS <- function(alt, g, inMat, pol, wgt) {
+#   
+#   # - alt, vector of alternative names
+#   # - g, vector of the spatial geometry of each alternative
+#   # - inMat, input sMCDA matrix
+#   # - pol, vector of the polarity of each alternative
+#   # - wgt, weighted scheme
+#   
+#   ###################
+#   # Normalization
+#   ###################
+#   
+#   # min-max
+#   norm.cri.minmax <- vector()
+#   for (j in 1:length(inMat[1,])){
+#     norm.cri.minmax <- cbind(norm.cri.minmax, normminmax(inMat[,j], pol[j]))
+#   }
+#   
+#   ###################
+#   # Weights
+#   ###################
+#   w <- weightsdist(wgt,length(inMat[1,]))
+#   
+#   ###################
+#   # Aggregations
+#   ###################
+#   
+#   # Weighted Sum
+#   res.minmax.ws <- weightedsum(norm.cri.minmax,w)
+#   
+#   ###################
+#   # Result
+#   ###################
+#   
+#   # Resulting data.frame.
+#   tmpres <-  cbind(alt,res.minmax.ws)
+#   # Generate the column names of the resulting matrix
+#   colnames(tmpres) <- c("Alternatives", "sMCDA Score")
+#   tmpres <- st_set_geometry(tmpres, g)
+#   return(tmpres)
+# }
 
 
 # This function calculate the sMCDA result for a 
 # set of uncertain criteria
-sMCDAunccritWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
+sMCDAcalcWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
   
   # - N, number of Monte-Carlo runs
   # - nat, nature of the criteria, i.e. exact or defined as a distribution
@@ -159,8 +160,14 @@ sMCDAunccritWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
   # - pol, vector of the polarity of each alternative
   # - wgt, weighted scheme
   
-  # Register the number of cores to be used for parallelization purposes
-  registerDoParallel(4) 
+  # Detect number of cores for parallel computing and assign all of them -1 for the computation
+  nmbcores <- detectCores() - 1
+  
+  # Activate cluster
+  cl <- makePSOCKcluster(nmbcores)
+  
+  # Register the number of cores to be used in the parallel computing
+  registerDoParallel(cl) 
   
   # Force input variables to avoid issues in the parallel process (see https://github.com/rstudio/shiny/issues/2163)
   force(nat)
@@ -225,25 +232,41 @@ sMCDAunccritWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
                   }
   
   ###################
-  # Result
+  # Results
   ###################
-  # Estimate the mean and standard deviation results for each alternative score based on a Monte-Carlo sampling
-  mean.minmax.ws <- vector()
-  sd.minmax.ws <- vector()
-  
-  for(i in 1:dim(inMat)[1]){
+
+  if(N != 1){
     
-    mean.minmax.ws[i] <- mean(res[,i])
-    sd.minmax.ws[i] <- sd(res[,i])
+    # Estimate the mean and standard deviation results for each alternative score based on a Monte-Carlo sampling
+    mean.minmax.ws <- vector()
+    sd.minmax.ws <- vector()
     
+    for(i in 1:dim(inMat)[1]){
+      
+      mean.minmax.ws[i] <- mean(res[,i])
+      sd.minmax.ws[i] <- sd(res[,i])
+      
+    }
+    
+    # Resulting data.frame. Important: For some reasons the results are inverted with respect to the Alternative names that's why I had to reverse the vector names indt[,1]
+    tmpres <-  cbind(alt,mean.minmax.ws,sd.minmax.ws)
+    
+    # Generate the column names of the resulting matrix
+    
+    colnames(tmpres) <- c("Alternatives", "Mean sMCDA Score", "SD sMCDA Score")
+    
+  } else {
+    
+    # Resulting data.frame. Important: For some reasons the results are inverted with respect to the Alternative names that's why I had to reverse the vector names indt[,1]
+    tmpres <-  cbind(alt,res)
+    
+    # Generate the column names of the resulting matrix
+    colnames(tmpres) <- c("Alternatives", "sMCDA Score")
   }
   
-  # Resulting data.frame. Important: For some reasons the results are inverted with respect to the Alternative names that's why I had to reverse the vector names indt[,1]
-  tmpres <-  cbind(alt,mean.minmax.ws,sd.minmax.ws)
-  
-  # Generate the column names of the resulting matrix
-  colnames(tmpres) <- c("Alternatives", "Mean sMCDA Score", "SD sMCDA Score")
   tmpres <- st_set_geometry(tmpres, g)
+  
+  stopCluster(cl)
   
   return(tmpres)
   

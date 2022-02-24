@@ -638,50 +638,60 @@ server <- function(input, output, session){
     }
     
     # Check number of Runs
-    if(input$MCrunsws != 1){
+    #if(input$MCrunsws != 1){
       
-      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
-      # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
-      sMCDAresws <- sMCDAunccritWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
-      
-      # Plot the resulting sMCDA map score
-      output$resmapws <-renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
-      remove_modal_spinner()
-      
-      # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
-      output$reshistws <- renderPlotly({
-        if (input$MCDAhistws > 0) {
-          
-          inphist <- sMCDAresws %>% st_drop_geometry()
+    show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
+    
+    # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
+    sMCDAresws <- sMCDAcalcWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
+    
+    # Plot the resulting sMCDA map score
+    l.name <- ifelse(input$MCrunsws != 1, "Mean sMCDA Score", "sMCDA Score")
+    output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = l.name, col.regions = mapcolpal, at = at_10)@map))
+    remove_modal_spinner()
+    
+    # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
+    output$reshistws <- renderPlotly({
+      if (input$MCDAhistws > 0) {
+        
+        inphist <- sMCDAresws %>% st_drop_geometry()
+        
+        if(input$MCrunsws != 1){
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = l.name)) %>% 
             config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_MC_",Sys.Date()) ,width = 1000,height =  350))
           fig
-        } 
-      }) 
-      
-    } else {
-      
-      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
-      # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
-      sMCDAresws <- sMCDAallexactcritWS(alternatives(),geom(),inMCDAmat(),polarity(),ws.weights)
-      
-      # Plot the resulting sMCDA map score
-      output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
-      remove_modal_spinner()
-      
-      # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
-      output$reshistws <- renderPlotly({
-        if (input$MCDAhistws > 0) {
-          
-          inphist <- sMCDAresws %>% st_drop_geometry()
+        } else {
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
-            config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_",Sys.Date()),width = 1000,height =  350))
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = l.name)) %>% 
+            config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_MC_",Sys.Date()) ,width = 1000,height =  350))
           fig
-        } 
-      }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
-    }
+        }
+      } 
+    }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
+      
+    # } else {
+    #   
+    #   show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
+    #   # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
+    #   sMCDAresws <- sMCDAunccritWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)#sMCDAallexactcritWS(alternatives(),geom(),inMCDAmat(),polarity(),ws.weights)
+    #   
+    #   # Plot the resulting sMCDA map score
+    #   output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
+    #   remove_modal_spinner()
+    #   
+    #   # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
+    #   output$reshistws <- renderPlotly({
+    #     if (input$MCDAhistws > 0) {
+    #       
+    #       inphist <- sMCDAresws %>% st_drop_geometry()
+    #       fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
+    #         layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
+    #         config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_",Sys.Date()),width = 1000,height =  350))
+    #       fig
+    #     } 
+    #   }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
+    #}
     
     # Download  map
     output$downloadWSMap <- renderUI(
