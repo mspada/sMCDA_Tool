@@ -100,52 +100,8 @@ margdist <- function(input, margdist){
 }
 
 ###################################################
-######## sMCDA Weighted Sum calculations ##########
+######## sMCDA Weighted Sum calculation ##########
 ###################################################
-
-# This function calculate the sMCDA result for a 
-# set of exact criteria
-# sMCDAallexactcritWS <- function(alt, g, inMat, pol, wgt) {
-#   
-#   # - alt, vector of alternative names
-#   # - g, vector of the spatial geometry of each alternative
-#   # - inMat, input sMCDA matrix
-#   # - pol, vector of the polarity of each alternative
-#   # - wgt, weighted scheme
-#   
-#   ###################
-#   # Normalization
-#   ###################
-#   
-#   # min-max
-#   norm.cri.minmax <- vector()
-#   for (j in 1:length(inMat[1,])){
-#     norm.cri.minmax <- cbind(norm.cri.minmax, normminmax(inMat[,j], pol[j]))
-#   }
-#   
-#   ###################
-#   # Weights
-#   ###################
-#   w <- weightsdist(wgt,length(inMat[1,]))
-#   
-#   ###################
-#   # Aggregations
-#   ###################
-#   
-#   # Weighted Sum
-#   res.minmax.ws <- weightedsum(norm.cri.minmax,w)
-#   
-#   ###################
-#   # Result
-#   ###################
-#   
-#   # Resulting data.frame.
-#   tmpres <-  cbind(alt,res.minmax.ws)
-#   # Generate the column names of the resulting matrix
-#   colnames(tmpres) <- c("Alternatives", "sMCDA Score")
-#   tmpres <- st_set_geometry(tmpres, g)
-#   return(tmpres)
-# }
 
 
 # This function calculate the sMCDA result for a 
@@ -273,63 +229,10 @@ sMCDAcalcWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
 }
 
 ###################################################
-######### sMCDA Outranking calculations ###########
+######### sMCDA Outranking calculation ###########
 ###################################################
 
-# This function calculate the sMCDA result for a 
-# set of uncertain criteria
-sMCDAallexactcritOut <- function(alt,g,pol, inMat, profMat,indif, pref, veto, l, wgt){
-  
-  # - alt, vector of alternative names
-  # - g, vector of the spatial geometry of each alternative
-  # - pol, vector of the polarity of each alternative
-  # - inMat, input sMCDA matrix
-  # - profMat, input classification profiles
-  # - indif, input indifference thresholds
-  # - pref, input preference thresholds
-  # - veto, input veto thresholds
-  # - l, input lambda
-  # - wgt, weighted scheme
-  
-  force(alt)
-  force(pol)
-  force(g)
-  force(inMat)
-  force(profMat)
-  force(indif)
-  force(pref)
-  force(veto)
-  force(l)
-  
-  res.electre <- electretri(inMat,profMat,pol,wgt,indif,pref,veto, l)
-  
-  if (length(profMat[,1]) == 2){
-    res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.5+res.electre[,3]*1)  
-  } else if (length(profMat[,1]) == 3) {
-    res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.33+res.electre[,3]*0.66+res.electre[,4]*1)  
-  } else if (length(profMat[,1]) == 4) {
-    res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.25+res.electre[,3]*0.5+res.electre[,4]*0.75+res.electre[,5]*1)
-  } else if (length(profMat[,1]) == 5) {
-    res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.2+res.electre[,3]*0.4+res.electre[,4]*0.6+res.electre[,5]*0.8+res.electre[,6]*1)
-  } else {
-    res.final <- as.numeric(res.electre)
-  }
-  
-  ###################
-  # Result
-  ###################
-  
-  # Resulting data.frame.
-  tmpres <-  cbind(alt,res.final)
-  
-  # Generate the column names of the resulting matrix
-  colnames(tmpres) <- c("Alternatives", "sMCDA Score")
-  tmpres <- st_set_geometry(tmpres, g)
-  return(tmpres)
-  
-}
-
-sMCDAunccritOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,session){
+sMCDAcalcOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,session){
   
   # - N, number of Monte-Carlo runs
   # - nat, nature of the criteria, i.e. exact or defined as a distribution
@@ -344,8 +247,14 @@ sMCDAunccritOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,
   # - l, input lambda
   # - wgt, weighted scheme
   
-  # Register the number of cores to be used for parallelization purposes
-  registerDoParallel(4) 
+  # Detect number of cores for parallel computing and assign all of them -1 for the computation
+  nmbcores <- detectCores() - 1
+  
+  # Activate cluster
+  cl <- makePSOCKcluster(nmbcores)
+  
+  # Register the number of cores to be used in the parallel computing
+  registerDoParallel(cl) 
   
   # Force input variables to avoid issues in the parallel process (see https://github.com/rstudio/shiny/issues/2163)
   force(nat)
@@ -407,40 +316,69 @@ sMCDAunccritOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,
                             
                           }
   
-  # Estimate Mean and Standard Deviation
-  idx <- rep(1:length(inMat[,1]))
-  res.electre <- cbind(idx, as.data.frame(res.electre))  
-  res.electre.mean <- as.matrix(res.electre %>% group_by(idx) %>% summarise_all(mean) %>% select(-1))
-  res.electre.sd <- as.matrix(res.electre %>% group_by(idx) %>% summarise_all(sd) %>% select(-1))
-  
-  # Calculate final score
-  if (length(profMat[,1]) == 2){
-    res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.5+res.electre.mean[,3]*1)  
-    res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.5+res.electre.sd[,3]*1)
-  } else if (length(profMat[,1]) == 3) {
-    res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.33+res.electre.mean[,3]*0.66+res.electre.mean[,4]*1) 
-    res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.33+res.electre.sd[,3]*0.66+res.electre.sd[,4]*1)
-  } else if (length(profMat[,1]) == 4) {
-    res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.25+res.electre.mean[,3]*0.5+res.electre.mean[,4]*0.75+res.electre.mean[,5]*1)
-    res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.25+res.electre.sd[,3]*0.5+res.electre.sd[,4]*0.75+res.electre.sd[,5]*1)
-  } else if (length(profMat[,1]) == 5) {
-    res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.2+res.electre.mean[,3]*0.4+res.electre.mean[,4]*0.6+res.electre.mean[,5]*0.8+res.electre.mean[,6]*1)
-    res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.2+res.electre.sd[,3]*0.4+res.electre.sd[,4]*0.6+res.electre.sd[,5]*0.8+res.electre.sd[,6]*1)
-  } else {
-    res.mean.final <- as.numeric(res.electre.mean)
-    res.sd.final <- as.numeric(res.electre.sd)
-  }
-  
   ###################
   # Result
   ###################
   
-  # Resulting data.frame.
-  tmpres <-  cbind(alt,res.mean.final,res.sd.final)
+  if(N != 1){
   
-  # Generate the column names of the resulting matrix
-  colnames(tmpres) <- c("Alternatives", "Mean sMCDA Score", "SD sMCDA Score")
+    # Estimate Mean and Standard Deviation
+    idx <- rep(1:length(inMat[,1]))
+    res.electre <- cbind(idx, as.data.frame(res.electre))  
+    res.electre.mean <- as.matrix(res.electre %>% group_by(idx) %>% summarise_all(mean) %>% select(-1))
+    res.electre.sd <- as.matrix(res.electre %>% group_by(idx) %>% summarise_all(sd) %>% select(-1))
+    
+    # Calculate final score
+    if (length(profMat[,1]) == 2){
+      res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.5+res.electre.mean[,3]*1)  
+      res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.5+res.electre.sd[,3]*1)
+    } else if (length(profMat[,1]) == 3) {
+      res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.33+res.electre.mean[,3]*0.66+res.electre.mean[,4]*1) 
+      res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.33+res.electre.sd[,3]*0.66+res.electre.sd[,4]*1)
+    } else if (length(profMat[,1]) == 4) {
+      res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.25+res.electre.mean[,3]*0.5+res.electre.mean[,4]*0.75+res.electre.mean[,5]*1)
+      res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.25+res.electre.sd[,3]*0.5+res.electre.sd[,4]*0.75+res.electre.sd[,5]*1)
+    } else if (length(profMat[,1]) == 5) {
+      res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.2+res.electre.mean[,3]*0.4+res.electre.mean[,4]*0.6+res.electre.mean[,5]*0.8+res.electre.mean[,6]*1)
+      res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.2+res.electre.sd[,3]*0.4+res.electre.sd[,4]*0.6+res.electre.sd[,5]*0.8+res.electre.sd[,6]*1)
+    } else {
+      res.mean.final <- as.numeric(res.electre.mean)
+      res.sd.final <- as.numeric(res.electre.sd)
+    }
+  
+    # Resulting data.frame.
+    tmpres <-  cbind(alt,res.mean.final,res.sd.final)
+    
+    # Generate the column names of the resulting matrix
+    colnames(tmpres) <- c("Alternatives", "Mean sMCDA Score", "SD sMCDA Score")
+    
+  } else {
+    
+    if (length(profMat[,1]) == 2){
+          res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.5+res.electre[,3]*1)
+        } else if (length(profMat[,1]) == 3) {
+          res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.33+res.electre[,3]*0.66+res.electre[,4]*1)
+        } else if (length(profMat[,1]) == 4) {
+          res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.25+res.electre[,3]*0.5+res.electre[,4]*0.75+res.electre[,5]*1)
+        } else if (length(profMat[,1]) == 5) {
+          res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.2+res.electre[,3]*0.4+res.electre[,4]*0.6+res.electre[,5]*0.8+res.electre[,6]*1)
+        } else {
+          res.final <- as.numeric(res.electre)
+        }
+
+
+        # Resulting data.frame.
+        tmpres <-  cbind(alt,res.final)
+
+        # Generate the column names of the resulting matrix
+        colnames(tmpres) <- c("Alternatives", "sMCDA Score")
+    
+  }
+  
   tmpres <- st_set_geometry(tmpres, g)
+  
+  stopCluster(cl)
+  
   return(tmpres)
   
 }
