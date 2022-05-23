@@ -131,6 +131,7 @@ sMCDAcalcWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
   force(pol)
   force(g)
   force(inMat)
+  force(wgt)
   
   # Run Monte-Carlo in parallel over numCores cores
   res <- foreach (icount(N), .combine=rbind, .multicombine=TRUE, 
@@ -267,6 +268,7 @@ sMCDAcalcOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,ses
   force(pref)
   force(veto)
   force(l)
+  force(wgt)
   
   # Run Monte-Carlo in parallel over numCores cores
   res.electre <- foreach (icount(N), .combine=rbind, .multicombine=TRUE, 
