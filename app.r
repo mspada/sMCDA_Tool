@@ -25,7 +25,6 @@ ui <- dashboardPage(
       tabItem("input", 
               fluidPage(
                 fluidRow(
-                  
                   column(width = 4,
                          titlePanel("Input Data"),
                          h4("Welcome to spatial Multi-Criteria Decison Analysis Tool!"),
@@ -49,10 +48,11 @@ ui <- dashboardPage(
                                        ""
                                        
                            ),
-                           checkboxInput('hist', "Show Histogram", FALSE),
-                           leafletOutput("mapplot", height = "600px"),
-                           uiOutput("downloadInMap"),
-                           plotlyOutput("histogram"),
+                           # checkboxInput('hist', "Show Histogram", FALSE),
+                           # leafletOutput("mapplot", height = "600px"),
+                           # uiOutput("downloadInMap"),
+                           # plotlyOutput("histogram"),
+                           mod_plot_histogram_ui("test1")
                          )
                   )
                 ),
@@ -271,58 +271,17 @@ server <- function(input, output, session){
     data() %>% select(-1)
   })
   
-  # Select Criteria from the data.frame to be used for plot purposes 
+  # Select Criteria from the data.frame to be used for plot purposes
   observe({
     updateSelectInput(
       session,
       "layers",
-      choices=c("",names(layers())))
+      choices=c("", names(layers())))
   })
   
   # Render the histogram of the selected Criteria if the "Show Histogram" is checked
-  histexp <- reactiveValues(dat = 0)
-  output$histogram <- renderPlotly({
-    if (input$hist > 0) {
-      
-      inphist <- data()
-      fig <- plot_ly(x = inphist[,1],y = inphist[,input$layers],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
-        layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",input$layers,""))) %>% 
-        config(plot_ly(),toImageButtonOptions= list(format = "png", filename = paste0("hist_",input$layers,"_",Sys.Date()),width = 1000,height =  350))
-      fig
-    }
-  }) 
-  
-  # Plot the layer under interest when the radioButton "Map" is selected
-  mapexp <- reactiveValues(dat = 0)
-  
   observeEvent(input$layers,{
-    show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-    indt <- data() %>% select(all_of(input$layers)) %>% st_set_geometry(geom())
-    output$mapplot <- renderLeaflet(mapexp$dat <- mapview:::removeZoomControl(mapview(indt,layer.name = input$layers)@map))
-    remove_modal_spinner()
-    
-    # Download button for map
-    output$downloadInMap <- renderUI(
-      
-      if(input$layers > 0) {
-        downloadButton("download_map", "Download Image", icon = icon("download")) 
-      } 
-    )
-    
-    output$download_map <- downloadHandler(
-      filename = function(){
-        paste0("map_",input$layers,"_",Sys.Date(),".png")
-      },
-      contentType = c("image/png"),
-      content = function(file){
-        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
-        mapshot(mapexp$dat,
-                file = file,
-                remove_controls = c("layersControl")
-        )
-        remove_modal_spinner()
-      }
-    )
+    mod_plot_histogram_server(id="test1",data = data(), sellay = input$layers, geometry = geom())  
   }, ignoreInit=TRUE)
   
   ##########################################
@@ -637,36 +596,51 @@ server <- function(input, output, session){
       ws.weights <- NULL
     }
     
-    # Generate spinner   
-    show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
-    
-    # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
-    sMCDAresws <- sMCDAcalcWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
-    
-    # Plot the resulting sMCDA map score
-    l.name <- ifelse(input$MCrunsws != 1, "Mean sMCDA Score", "sMCDA Score")
-    output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = l.name, col.regions = mapcolpal, at = at_10)@map))
-    remove_modal_spinner()
-    
-    # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
-    output$reshistws <- renderPlotly({
-      if (input$MCDAhistws > 0) {
-        
-        inphist <- sMCDAresws %>% st_drop_geometry()
-        
-        if(input$MCrunsws != 1){
+    # Check number of Runs
+    if(input$MCrunsws != 1){
+      
+      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
+      # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
+      sMCDAresws <- sMCDAunccritWS(input$MCrunsws,nature(),alternatives(),geom(),inMCDAmat(),polarity(),ws.weights,session)
+      
+      # Plot the resulting sMCDA map score
+      output$resmapws <-renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("Mean sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
+      remove_modal_spinner()
+      
+      # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
+      output$reshistws <- renderPlotly({
+        if (input$MCDAhistws > 0) {
+          
+          inphist <- sMCDAresws %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = l.name)) %>% 
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
             config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_MC_",Sys.Date()) ,width = 1000,height =  350))
           fig
-        } else {
+        } 
+      }) 
+      
+    } else {
+      
+      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
+      # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
+      sMCDAresws <- sMCDAallexactcritWS(alternatives(),geom(),inMCDAmat(),polarity(),ws.weights)
+      
+      # Plot the resulting sMCDA map score
+      output$resmapws <- renderLeaflet(mapWSexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresws[,2],layer.name = c("sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
+      remove_modal_spinner()
+      
+      # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
+      output$reshistws <- renderPlotly({
+        if (input$MCDAhistws > 0) {
+          
+          inphist <- sMCDAresws %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = l.name)) %>% 
-            config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_MC_",Sys.Date()) ,width = 1000,height =  350))
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
+            config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_weightedsum_",Sys.Date()),width = 1000,height =  350))
           fig
-        }
-      } 
-    }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
+        } 
+      }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked
+    }
     
     # Download  map
     output$downloadWSMap <- renderUI(
@@ -1098,36 +1072,54 @@ server <- function(input, output, session){
       out.weights <- NULL
     }
     
-    # Generate spinner 
-    show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
     
-    # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
-    sMCDAresout <- sMCDAcalcOut(input$MCrunsout,nature(),alternatives(),geom(),polarity(),inMCDAmat(), t(profMat()),indifthr(),prefthr(),vetothr(),input$lambda/100,out.weights,session)
-    
-    # Plot the resulting sMCDA map score
-    l.name <- ifelse(input$MCrunsout != 1, "Mean sMCDA Score", "sMCDA Score")
-    output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = l.name, col.regions = mapcolpal, at = at_10)@map))
-    remove_modal_spinner()
-    
-    # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
-    output$reshistout <- renderPlotly({
-      if (input$sMCDAhistOut > 0) {
-        
-        inphist <- sMCDAresout %>% st_drop_geometry()
-        
-        if(input$MCrunsout != 1){
+    # Check number of Runs
+    if(input$MCrunsout != 1){
+      
+      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
+      
+      # Calculate the sMCDA results using a min-max normalization and a weighted-sum aggregation
+      sMCDAresout <- sMCDAunccritOut(input$MCrunsout,nature(),alternatives(),geom(),polarity(),inMCDAmat(), t(profMat()),indifthr(),prefthr(),vetothr(),input$lambda/100,out.weights,session)
+      
+      # Plot the resulting sMCDA map score
+      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("Mean sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
+      remove_modal_spinner()
+      
+      # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
+      output$reshistout <- renderPlotly({
+        if (input$sMCDAhistOut > 0) {
+          
+          inphist <- sMCDAresout %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)'), error_y = ~list(array = inphist[,3], color = '#000000')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = l.name)) %>% 
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
             config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_outranking_MC_",Sys.Date()),width = 1000,height =  350))
           fig
-        } else {
+        }
+      }) 
+      
+    } else {
+      
+      show_modal_spinner(spin = "atom", color = "#112446",text = HTML("Calculating...It might take some time!<br> Please Wait..."))
+      
+      # Calculate the sMCDA results using an Electre-TRI method
+      sMCDAresout <- sMCDAallexactcritOut(alternatives(),geom(),polarity(), inMCDAmat(), t(profMat()),indifthr(), prefthr(), vetothr(), input$lambda/100,out.weights)
+      
+      # Plot the resulting sMCDA map score
+      output$resmapout <- renderLeaflet(mapOutexp$dat <- mapview:::removeZoomControl(mapview(sMCDAresout[,2],layer.name = c("sMCDA Score"), col.regions = mapcolpal, at = at_10)@map))
+      remove_modal_spinner()
+      
+      # Render the histogram of the resulting sMCDA score if the "Show Histogram" is checked
+      output$reshistout <- renderPlotly({
+        if (input$sMCDAhistOut > 0) {
+          
+          inphist <- sMCDAresout %>% st_drop_geometry()
           fig <- plot_ly(x = inphist[,1],y = inphist[,2],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>% 
-            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = l.name)) %>% 
+            layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = "sMCDA score")) %>% 
             config(plot_ly(),toImageButtonOptions= list(format = "png",filename = paste0("hist_outranking_",Sys.Date()),width = 1000,height =  350))
           fig
         }
-      }
-    }) # Transparency added to avoid a white square below the map when the "Show Histogram" is not checked  
+      }) 
+    }
     
     # Download map
     output$downloadOutMap <- renderUI(

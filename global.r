@@ -6,13 +6,14 @@ library(shinydashboard)
 library(shinybusy)
 library(openxlsx)
 library(tidyverse)
+library(dplyr)
 library(DT)
 library(sf)
 library(mapview)
-library(parallel)
 library(doParallel)
 library(foreach)
 library(leaflet)
+library(leafgl)
 library(RJSONIO)
 library(plotly)
 library(RColorBrewer)
@@ -62,6 +63,61 @@ dbHeader <- dashboardHeader(title = "sMCDA Tool",
                                       title = "Logout"),
                                     class = "dropdown"))
 
+
+###################################################
+############## Test Modularization ################
+###################################################
+
+mod_plot_histogram_ui <- function(id){
+  ns <- NS(id)
+  tagList(
+    checkboxInput(ns("hist"), "Show Histogram", FALSE),
+    leafglOutput(ns("mapplot"), height = "600px"),
+    uiOutput(ns("downloadInMap")),
+    plotlyOutput(ns("histogram"))
+  )
+}
+
+mod_plot_histogram_server <- function(id, data, sellay, geometry){
+  moduleServer( id, function(input, output, session){
+    ns <- session$ns
+    
+    mapexp <- reactiveValues(dat = 0)
+    show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+    indt <- data %>% select(all_of(sellay)) %>% st_set_geometry(geometry)
+    output$mapplot <- renderLeaflet(mapexp$dat <- mapview:::removeZoomControl(mapview(indt,layer.name = sellay)@map))
+    remove_modal_spinner()
+    
+    # Download button for map
+    output$downloadInMap <- renderUI(
+      downloadButton("download_map", "Download Image", icon = icon("download"))
+    )
+    
+    output$download_map <- downloadHandler(
+      filename = function(){
+        paste0("map_",sellay,"_",Sys.Date(),".png")
+      },
+      contentType = c("image/png"),
+      content = function(file){
+        show_modal_spinner(spin = "atom", color = "#112446",text = "Please Wait...")
+        mapshot(mapexp$dat,
+                file = file,
+                remove_controls = c("layersControl")
+        )
+        remove_modal_spinner()
+      }
+    )
+    
+    output$histogram <- renderPlotly({
+      if(input$hist > 0) {plot_ly(x = data[,1],y = data[,sellay],type = "bar", marker = list(color = 'rgb(49,130,189)')) %>%
+          layout(xaxis = list(title = "", tickangle = -45), yaxis = list(title = paste0("",sellay,""))) %>%
+          config(plot_ly(),toImageButtonOptions= list(format = "png", filename = paste0("hist_",sellay,"_",Sys.Date()),width = 1000,height =  350))
+      }
+    })
+    
+  })
+}
+
 ###################################################
 ######## Marginal Distributions Generator #########
 ###################################################
@@ -100,13 +156,57 @@ margdist <- function(input, margdist){
 }
 
 ###################################################
-######## sMCDA Weighted Sum calculation ##########
+######## sMCDA Weighted Sum calculations ##########
 ###################################################
+
+# This function calculate the sMCDA result for a 
+# set of exact criteria
+sMCDAallexactcritWS <- function(alt, g, inMat, pol, wgt) {
+  
+  # - alt, vector of alternative names
+  # - g, vector of the spatial geometry of each alternative
+  # - inMat, input sMCDA matrix
+  # - pol, vector of the polarity of each alternative
+  # - wgt, weighted scheme
+  
+  ###################
+  # Normalization
+  ###################
+  
+  # min-max
+  norm.cri.minmax <- vector()
+  for (j in 1:length(inMat[1,])){
+    norm.cri.minmax <- cbind(norm.cri.minmax, normminmax(inMat[,j], pol[j]))
+  }
+  
+  ###################
+  # Weights
+  ###################
+  w <- weightsdist(wgt,length(inMat[1,]))
+  
+  ###################
+  # Aggregations
+  ###################
+  
+  # Weighted Sum
+  res.minmax.ws <- weightedsum(norm.cri.minmax,w)
+  
+  ###################
+  # Result
+  ###################
+  
+  # Resulting data.frame.
+  tmpres <-  cbind(alt,res.minmax.ws)
+  # Generate the column names of the resulting matrix
+  colnames(tmpres) <- c("Alternatives", "sMCDA Score")
+  tmpres <- st_set_geometry(tmpres, g)
+  return(tmpres)
+}
 
 
 # This function calculate the sMCDA result for a 
 # set of uncertain criteria
-sMCDAcalcWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
+sMCDAunccritWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
   
   # - N, number of Monte-Carlo runs
   # - nat, nature of the criteria, i.e. exact or defined as a distribution
@@ -116,14 +216,8 @@ sMCDAcalcWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
   # - pol, vector of the polarity of each alternative
   # - wgt, weighted scheme
   
-  # Detect number of cores for parallel computing and assign all of them -1 for the computation
-  nmbcores <- detectCores() - 1
-  
-  # Activate cluster
-  cl <- makePSOCKcluster(nmbcores)
-  
-  # Register the number of cores to be used in the parallel computing
-  registerDoParallel(cl) 
+  # Register the number of cores to be used for parallelization purposes
+  registerDoParallel(4) 
   
   # Force input variables to avoid issues in the parallel process (see https://github.com/rstudio/shiny/issues/2163)
   force(nat)
@@ -131,7 +225,6 @@ sMCDAcalcWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
   force(pol)
   force(g)
   force(inMat)
-  force(wgt)
   
   # Run Monte-Carlo in parallel over numCores cores
   res <- foreach (icount(N), .combine=rbind, .multicombine=TRUE, 
@@ -189,51 +282,88 @@ sMCDAcalcWS <- function(N, nat, alt, g, inMat, pol, wgt, session) {
                   }
   
   ###################
-  # Results
+  # Result
   ###################
-
-  if(N != 1){
+  # Estimate the mean and standard deviation results for each alternative score based on a Monte-Carlo sampling
+  mean.minmax.ws <- vector()
+  sd.minmax.ws <- vector()
+  
+  for(i in 1:dim(inMat)[1]){
     
-    # Estimate the mean and standard deviation results for each alternative score based on a Monte-Carlo sampling
-    mean.minmax.ws <- vector()
-    sd.minmax.ws <- vector()
+    mean.minmax.ws[i] <- mean(res[,i])
+    sd.minmax.ws[i] <- sd(res[,i])
     
-    for(i in 1:dim(inMat)[1]){
-      
-      mean.minmax.ws[i] <- mean(res[,i])
-      sd.minmax.ws[i] <- sd(res[,i])
-      
-    }
-    
-    # Resulting data.frame. Important: For some reasons the results are inverted with respect to the Alternative names that's why I had to reverse the vector names indt[,1]
-    tmpres <-  cbind(alt,mean.minmax.ws,sd.minmax.ws)
-    
-    # Generate the column names of the resulting matrix
-    
-    colnames(tmpres) <- c("Alternatives", "Mean sMCDA Score", "SD sMCDA Score")
-    
-  } else {
-    
-    # Resulting data.frame. Important: For some reasons the results are inverted with respect to the Alternative names that's why I had to reverse the vector names indt[,1]
-    tmpres <-  cbind(alt,res)
-    
-    # Generate the column names of the resulting matrix
-    colnames(tmpres) <- c("Alternatives", "sMCDA Score")
   }
   
-  tmpres <- st_set_geometry(tmpres, g)
+  # Resulting data.frame. Important: For some reasons the results are inverted with respect to the Alternative names that's why I had to reverse the vector names indt[,1]
+  tmpres <-  cbind(alt,mean.minmax.ws,sd.minmax.ws)
   
-  stopCluster(cl)
+  # Generate the column names of the resulting matrix
+  colnames(tmpres) <- c("Alternatives", "Mean sMCDA Score", "SD sMCDA Score")
+  tmpres <- st_set_geometry(tmpres, g)
   
   return(tmpres)
   
 }
 
 ###################################################
-######### sMCDA Outranking calculation ###########
+######### sMCDA Outranking calculations ###########
 ###################################################
 
-sMCDAcalcOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,session){
+# This function calculate the sMCDA result for a 
+# set of uncertain criteria
+sMCDAallexactcritOut <- function(alt,g,pol, inMat, profMat,indif, pref, veto, l, wgt){
+  
+  # - alt, vector of alternative names
+  # - g, vector of the spatial geometry of each alternative
+  # - pol, vector of the polarity of each alternative
+  # - inMat, input sMCDA matrix
+  # - profMat, input classification profiles
+  # - indif, input indifference thresholds
+  # - pref, input preference thresholds
+  # - veto, input veto thresholds
+  # - l, input lambda
+  # - wgt, weighted scheme
+  
+  force(alt)
+  force(pol)
+  force(g)
+  force(inMat)
+  force(profMat)
+  force(indif)
+  force(pref)
+  force(veto)
+  force(l)
+  
+  res.electre <- electretri(inMat,profMat,pol,wgt,indif,pref,veto, l)
+  
+  if (length(profMat[,1]) == 2){
+    res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.5+res.electre[,3]*1)  
+  } else if (length(profMat[,1]) == 3) {
+    res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.33+res.electre[,3]*0.66+res.electre[,4]*1)  
+  } else if (length(profMat[,1]) == 4) {
+    res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.25+res.electre[,3]*0.5+res.electre[,4]*0.75+res.electre[,5]*1)
+  } else if (length(profMat[,1]) == 5) {
+    res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.2+res.electre[,3]*0.4+res.electre[,4]*0.6+res.electre[,5]*0.8+res.electre[,6]*1)
+  } else {
+    res.final <- as.numeric(res.electre)
+  }
+  
+  ###################
+  # Result
+  ###################
+  
+  # Resulting data.frame.
+  tmpres <-  cbind(alt,res.final)
+  
+  # Generate the column names of the resulting matrix
+  colnames(tmpres) <- c("Alternatives", "sMCDA Score")
+  tmpres <- st_set_geometry(tmpres, g)
+  return(tmpres)
+  
+}
+
+sMCDAunccritOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,session){
   
   # - N, number of Monte-Carlo runs
   # - nat, nature of the criteria, i.e. exact or defined as a distribution
@@ -248,14 +378,8 @@ sMCDAcalcOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,ses
   # - l, input lambda
   # - wgt, weighted scheme
   
-  # Detect number of cores for parallel computing and assign all of them -1 for the computation
-  nmbcores <- detectCores() - 1
-  
-  # Activate cluster
-  cl <- makePSOCKcluster(nmbcores)
-  
-  # Register the number of cores to be used in the parallel computing
-  registerDoParallel(cl) 
+  # Register the number of cores to be used for parallelization purposes
+  registerDoParallel(4) 
   
   # Force input variables to avoid issues in the parallel process (see https://github.com/rstudio/shiny/issues/2163)
   force(nat)
@@ -268,7 +392,6 @@ sMCDAcalcOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,ses
   force(pref)
   force(veto)
   force(l)
-  force(wgt)
   
   # Run Monte-Carlo in parallel over numCores cores
   res.electre <- foreach (icount(N), .combine=rbind, .multicombine=TRUE, 
@@ -318,69 +441,40 @@ sMCDAcalcOut <- function(N,nat,alt,g,pol,inMat,profMat,indif,pref,veto,l,wgt,ses
                             
                           }
   
+  # Estimate Mean and Standard Deviation
+  idx <- rep(1:length(inMat[,1]))
+  res.electre <- cbind(idx, as.data.frame(res.electre))  
+  res.electre.mean <- as.matrix(res.electre %>% group_by(idx) %>% summarise_all(mean) %>% select(-1))
+  res.electre.sd <- as.matrix(res.electre %>% group_by(idx) %>% summarise_all(sd) %>% select(-1))
+  
+  # Calculate final score
+  if (length(profMat[,1]) == 2){
+    res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.5+res.electre.mean[,3]*1)  
+    res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.5+res.electre.sd[,3]*1)
+  } else if (length(profMat[,1]) == 3) {
+    res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.33+res.electre.mean[,3]*0.66+res.electre.mean[,4]*1) 
+    res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.33+res.electre.sd[,3]*0.66+res.electre.sd[,4]*1)
+  } else if (length(profMat[,1]) == 4) {
+    res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.25+res.electre.mean[,3]*0.5+res.electre.mean[,4]*0.75+res.electre.mean[,5]*1)
+    res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.25+res.electre.sd[,3]*0.5+res.electre.sd[,4]*0.75+res.electre.sd[,5]*1)
+  } else if (length(profMat[,1]) == 5) {
+    res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.2+res.electre.mean[,3]*0.4+res.electre.mean[,4]*0.6+res.electre.mean[,5]*0.8+res.electre.mean[,6]*1)
+    res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.2+res.electre.sd[,3]*0.4+res.electre.sd[,4]*0.6+res.electre.sd[,5]*0.8+res.electre.sd[,6]*1)
+  } else {
+    res.mean.final <- as.numeric(res.electre.mean)
+    res.sd.final <- as.numeric(res.electre.sd)
+  }
+  
   ###################
   # Result
   ###################
   
-  if(N != 1){
+  # Resulting data.frame.
+  tmpres <-  cbind(alt,res.mean.final,res.sd.final)
   
-    # Estimate Mean and Standard Deviation
-    idx <- rep(1:length(inMat[,1]))
-    res.electre <- cbind(idx, as.data.frame(res.electre))  
-    res.electre.mean <- as.matrix(res.electre %>% group_by(idx) %>% summarise_all(mean) %>% select(-1))
-    res.electre.sd <- as.matrix(res.electre %>% group_by(idx) %>% summarise_all(sd) %>% select(-1))
-    
-    # Calculate final score
-    if (length(profMat[,1]) == 2){
-      res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.5+res.electre.mean[,3]*1)  
-      res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.5+res.electre.sd[,3]*1)
-    } else if (length(profMat[,1]) == 3) {
-      res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.33+res.electre.mean[,3]*0.66+res.electre.mean[,4]*1) 
-      res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.33+res.electre.sd[,3]*0.66+res.electre.sd[,4]*1)
-    } else if (length(profMat[,1]) == 4) {
-      res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.25+res.electre.mean[,3]*0.5+res.electre.mean[,4]*0.75+res.electre.mean[,5]*1)
-      res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.25+res.electre.sd[,3]*0.5+res.electre.sd[,4]*0.75+res.electre.sd[,5]*1)
-    } else if (length(profMat[,1]) == 5) {
-      res.mean.final <- as.numeric(res.electre.mean[,1]*0+res.electre.mean[,2]*0.2+res.electre.mean[,3]*0.4+res.electre.mean[,4]*0.6+res.electre.mean[,5]*0.8+res.electre.mean[,6]*1)
-      res.sd.final <- as.numeric(res.electre.sd[,1]*0+res.electre.sd[,2]*0.2+res.electre.sd[,3]*0.4+res.electre.sd[,4]*0.6+res.electre.sd[,5]*0.8+res.electre.sd[,6]*1)
-    } else {
-      res.mean.final <- as.numeric(res.electre.mean)
-      res.sd.final <- as.numeric(res.electre.sd)
-    }
-  
-    # Resulting data.frame.
-    tmpres <-  cbind(alt,res.mean.final,res.sd.final)
-    
-    # Generate the column names of the resulting matrix
-    colnames(tmpres) <- c("Alternatives", "Mean sMCDA Score", "SD sMCDA Score")
-    
-  } else {
-    
-    if (length(profMat[,1]) == 2){
-          res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.5+res.electre[,3]*1)
-        } else if (length(profMat[,1]) == 3) {
-          res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.33+res.electre[,3]*0.66+res.electre[,4]*1)
-        } else if (length(profMat[,1]) == 4) {
-          res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.25+res.electre[,3]*0.5+res.electre[,4]*0.75+res.electre[,5]*1)
-        } else if (length(profMat[,1]) == 5) {
-          res.final <- as.numeric(res.electre[,1]*0+res.electre[,2]*0.2+res.electre[,3]*0.4+res.electre[,4]*0.6+res.electre[,5]*0.8+res.electre[,6]*1)
-        } else {
-          res.final <- as.numeric(res.electre)
-        }
-
-
-        # Resulting data.frame.
-        tmpres <-  cbind(alt,res.final)
-
-        # Generate the column names of the resulting matrix
-        colnames(tmpres) <- c("Alternatives", "sMCDA Score")
-    
-  }
-  
+  # Generate the column names of the resulting matrix
+  colnames(tmpres) <- c("Alternatives", "Mean sMCDA Score", "SD sMCDA Score")
   tmpres <- st_set_geometry(tmpres, g)
-  
-  stopCluster(cl)
-  
   return(tmpres)
   
 }
