@@ -26,7 +26,7 @@ ui <- dashboardPage(
               fluidPage(
                 fluidRow(
                   column(width = 4,
-                         titlePanel("Input Data"),
+                         titlePanel("Input Data"),  
                          h4("Welcome to spatial Multi-Criteria Decison Analysis Tool!"),
                          h4("Data format: First column for the alternatives and the 
                   remaining columns for the performance of the alternatives on 
