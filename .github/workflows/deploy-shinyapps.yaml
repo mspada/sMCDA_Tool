@@ -29,9 +29,26 @@ jobs:
           r-version: "release"
           use-public-rspm: true
 
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-openssl-dev libssl-dev libxml2-dev \
+            libfontconfig1-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
+            libharfbuzz-dev libfribidi-dev \
+            libudunits2-dev libgdal-dev libgeos-dev libproj-dev
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rsconnect
+          extra-packages: |
+            any::renv
+            any::rsconnect
+
+      - name: Restore renv lockfile
+        run: |
+          Rscript -e "renv::consent(provided = TRUE)"
+          Rscript -e "renv::restore(lockfile = 'renv.lock', prompt = FALSE)"
 
       - name: Deploy app
         env:
