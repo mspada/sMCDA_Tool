@@ -1,0 +1,27 @@
+Package: sMCDATool
+Title: Spatial Multi-Criteria Decision Analysis Shiny App
+Version: 0.0.0.9000
+Authors@R: person(given = "sMCDA", family = "Team", role = c("aut", "cre"), email = "matteo.spada@zhaw.ch")
+Description: Golem wrapper for the sMCDA Tool Shiny application.
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+    doParallel,
+    DT,
+    foreach,
+    golem,
+    leaflet,
+    mapview,
+    openxlsx,
+    plotly,
+    RColorBrewer,
+    RJSONIO,
+    sf,
+    shiny,
+    shinybusy,
+    shinydashboard,
+    tidyverse,
+    webshot
