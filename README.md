@@ -1,55 +1,54 @@
 # sMCDA Tool
 
-sMCDA Tool e una Shiny app per problemi di **spatial Multi-Criteria Decision Analysis (sMCDA)**.
-Supporta:
+sMCDA Tool is a Shiny application for **spatial Multi-Criteria Decision Analysis (sMCDA)**.
+It supports:
 
-- metodo **Weighted Sum**
-- metodo **ELECTRE-TRI (Outranking)**
-- gestione di input certi/incerti con approccio SMAA
-- export risultati in immagini, CSV, XLSX e shapefile ESRI
+- **Weighted Sum**
+- **ELECTRE-TRI (Outranking)**
+- deterministic and uncertain inputs (SMAA-style uncertainty handling)
+- export to images, CSV, XLSX, and ESRI shapefiles
 
-## Struttura del progetto
+## Project Layout
 
-La codebase e stata portata in un setup compatibile con `{golem}` mantenendo la logica legacy.
+The app is now organized in a golem-compatible structure while preserving legacy logic.
 
-- `R/run_app.R`: entrypoint principale
-- `R/app_ui.R`: wrapper UI
-- `R/app_server.R`: wrapper server
-- `R/legacy_loader.R`: caricamento logica legacy
-- `inst/app/legacy_definitions.R`: `ui` / `server` originali
+- `R/run_app.R`: main entrypoint
+- `R/app_ui.R`: UI wrapper
+- `R/app_server.R`: server wrapper
+- `R/legacy_loader.R`: loader for legacy app definitions
+- `inst/app/legacy_definitions.R`: legacy `ui` and `server`
+- `inst/app/global.R`: legacy global setup and utility functions
 
-## Requisiti comuni
+## Requirements
 
-- **R 4.5.x** (il lockfile e stato aggiornato con R `4.5.1`)
-- connessione internet (prima installazione/restauro)
-- spazio disco sufficiente per libreria `renv`
+- **R 4.5.x** (the lockfile was generated with R `4.5.1`)
+- internet connection for first restore/install
+- enough disk space for the local `renv` library
 
-## Prerequisiti per OS
+## OS Setup
 
 ### Windows (10/11)
 
-1. Installa **R 4.5.x** da CRAN.
-2. Installa **Rtools45** (necessario se qualche pacchetto deve compilare da sorgente).
-3. In genere i pacchetti CRAN binari evitano dipendenze di sistema manuali per `sf`/`terra`.
+1. Install **R 4.5.x** from CRAN.
+2. Install **Rtools45** (needed if source compilation is required).
+3. Most CRAN binaries should avoid manual system setup for `sf`/`terra`.
 
-### macOS (Intel e Apple Silicon)
+### macOS (Intel and Apple Silicon)
 
-1. Installa **R 4.5.x**.
-2. Installa Command Line Tools:
+1. Install **R 4.5.x**.
+2. Install Command Line Tools:
 
 ```bash
 xcode-select --install
 ```
 
-3. Se necessario per compilazioni da sorgente (soprattutto `sf`/`terra`), installa librerie geospaziali:
+3. If source compilation is needed (especially for geospatial packages):
 
 ```bash
 brew install gdal geos proj udunits
 ```
 
 ### Linux (Debian/Ubuntu)
-
-Installa toolchain e librerie di sistema piu comuni per i pacchetti del progetto:
 
 ```bash
 sudo apt update
@@ -61,7 +60,7 @@ sudo apt install -y \
   libudunits2-dev libgdal-dev libgeos-dev libproj-dev
 ```
 
-### Linux (Fedora/RHEL/CentOS stream)
+### Linux (Fedora/RHEL/CentOS Stream)
 
 ```bash
 sudo dnf install -y \
@@ -72,30 +71,27 @@ sudo dnf install -y \
   udunits2-devel gdal-devel geos-devel proj-devel
 ```
 
-## Installazione con `renv` (consigliata)
+## Recommended Installation with `renv`
 
-> Questa e la procedura raccomandata su tutti gli OS.
-
-1. Clona il repository e entra nella cartella progetto.
-2. Avvia R o RStudio **nella root del progetto**.
-3. Attiva `renv` e ripristina l'ambiente:
+1. Clone the repository and open R/RStudio in the project root.
+2. Activate and restore dependencies:
 
 ```r
 source("renv/activate.R")
 renv::restore(prompt = FALSE)
 ```
 
-4. Verifica che sia tutto coerente:
+3. Verify environment consistency:
 
 ```r
 renv::status()
 ```
 
-Se lo stato e corretto, deve risultare senza problemi.
+If everything is correct, `renv::status()` should report no issues.
 
-## Come avviare l'app
+## Run the App
 
-### Opzione A (consigliata, entrypoint golem)
+### Option A (recommended, golem entrypoint)
 
 ```r
 source("R/legacy_loader.R")
@@ -105,7 +101,7 @@ source("R/run_app.R")
 run_app()
 ```
 
-### Opzione B (installazione package locale)
+### Option B (install local package)
 
 ```r
 install.packages("remotes")
@@ -113,94 +109,98 @@ remotes::install_local(".")
 sMCDATool::run_app()
 ```
 
-### Opzione C (legacy)
+### Option C (legacy app-dir run)
 
 ```r
 shiny::runApp("inst/app")
 ```
 
-## Guida pratica a `renv` in questo progetto
+## `renv` Workflow in This Project
 
-### Come funziona qui
+### What `renv` controls
 
-- `.Rprofile` esegue `source("renv/activate.R")` all'apertura del progetto.
-- `renv.lock` e la sorgente di verita delle versioni pacchetti.
-- la libreria locale e isolata dal tuo ambiente globale R.
+- `renv.lock` stores exact package versions.
+- The project uses an isolated local library (not your global user library).
+- Every collaborator should restore from `renv.lock` for reproducibility.
 
-### Comandi fondamentali
+### Core commands
 
-Ripristino ambiente da lockfile:
+Restore from lockfile:
 
 ```r
 renv::restore(prompt = FALSE)
 ```
 
-Controllo coerenza lockfile/libreria:
+Check lockfile/library consistency:
 
 ```r
 renv::status()
 ```
 
-Aggiornare dipendenze (quando vuoi cambiare versioni):
+Update dependencies and record them:
 
 ```r
 renv::update()
 renv::snapshot(prompt = FALSE)
 ```
 
-Reinstallare un pacchetto problematico:
+Rebuild a problematic package:
 
 ```r
 renv::rebuild("sf")
 ```
 
-Pulire pacchetti non piu usati:
+Clean unused packages:
 
 ```r
 renv::clean()
 ```
 
-### Workflow consigliato team
+### Team workflow
 
-1. `renv::restore()` dopo `git pull`.
-2. Sviluppo normale.
-3. Se aggiorni dipendenze: `renv::snapshot()`.
-4. Committa sempre almeno `renv.lock` (e file `renv/` se modificati).
+1. Run `renv::restore()` after each `git pull`.
+2. Develop normally.
+3. If you intentionally change dependency versions, run `renv::snapshot()`.
+4. Commit `renv.lock` (and `renv/` files if they changed).
 
 ## Troubleshooting
 
-### Errore download CRAN / rete bloccata
+### CRAN download/network errors
 
-Sintomo tipico: errori su `cloud.r-project.org`.
+Typical symptom: errors reaching `cloud.r-project.org`.
 
-- verifica proxy/firewall aziendale
-- riprova con connessione libera
-- in casi aziendali configura mirror/proxy CRAN
+- check proxy/firewall settings
+- retry on a different network
+- configure a company-approved CRAN mirror if required
 
-### Errori su `sf`, `terra`, `units`
+### `sf` / `terra` / `units` installation errors
 
-Quasi sempre mancano librerie di sistema geospaziali.
-Installa i prerequisiti OS sopra e rilancia:
+Usually caused by missing system libraries.
+Install OS prerequisites above, then run:
 
 ```r
 renv::restore(prompt = FALSE)
 ```
 
-### Warning "package was built under R version ..."
+### Warning: "package was built under R version ..."
 
-Di solito e solo un warning di compatibilita binaria. Se l'app parte, non e bloccante.
-Per riallineare completamente, usa R della stessa minor release del team e riesegui `renv::restore()`.
+Usually non-blocking if the app starts correctly.
+For full alignment, use the same R minor version as the team and re-run `renv::restore()`.
 
 ### `webshot` / PhantomJS
 
-L'app usa `webshot` per export mappe. Alla prima esecuzione puo essere richiesto setup di PhantomJS.
-Se serve manualmente:
+Map export uses `webshot`. If needed:
 
 ```r
 webshot::install_phantomjs()
 ```
 
-## Licenza
+## Root Files (Why They Exist)
 
-Questo progetto e distribuito sotto **GNU GPL v2**.
-Vedi il file [LICENSE](LICENSE).
+- `.gitignore`: **required** to avoid committing temporary/local files.
+- `.Rbuildignore`: recommended for R package builds to exclude non-package artifacts.
+
+## License
+
+This project is licensed under **GNU GPL v2**.
+See [LICENSE](LICENSE).
