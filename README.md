@@ -91,7 +91,14 @@ If everything is correct, `renv::status()` should report no issues.
 
 ## Run the App
 
-### Option A (recommended, golem entrypoint)
+### Option A (recommended, simple bootstrap)
+
+```r
+source("app.R")
+run_app()
+```
+
+### Option B (direct golem entrypoint)
 
 ```r
 source("R/legacy_loader.R")
@@ -101,7 +108,7 @@ source("R/run_app.R")
 run_app()
 ```
 
-### Option B (install local package)
+### Option C (install local package)
 
 ```r
 install.packages("remotes")
@@ -109,7 +116,7 @@ remotes::install_local(".")
 sMCDATool::run_app()
 ```
 
-### Option C (legacy app-dir run)
+### Option D (legacy app-dir run)
 
 ```r
 shiny::runApp("inst/app")
