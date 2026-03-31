@@ -1,4 +1,5 @@
 ^\.Rproj\.user$
+^\.Rprofile$
 ^\.git$
 ^\.gitignore$
 ^\.DS_Store$
@@ -7,7 +8,3 @@
 ^sMCDA_Tool\.Rproj$
 ^sMCDA Tool Manual\.pdf$
 ^data_example$
-^app-test\.r$
-^app\.r$
-^global\.r$
-^www$
