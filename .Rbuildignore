@@ -2,6 +2,7 @@
 ^\.Rprofile$
 ^\.git$
 ^\.gitignore$
+^\.github$
 ^\.DS_Store$
 ^renv$
 ^renv\.lock$
