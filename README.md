@@ -207,6 +207,27 @@ webshot::install_phantomjs()
 - `.gitignore`: **required** to avoid committing temporary/local files.
 - `.Rbuildignore`: recommended for R package builds to exclude non-package artifacts.
 
+## CI/CD: Deploy to shinyapps.io
+
+This repository includes a workflow:
+
+- `.github/workflows/deploy-shinyapps.yaml`
+
+It deploys `inst/app` to shinyapps.io on:
+
+- successful completion of `R-CMD-check` on `main` / `master`
+- manual trigger (`workflow_dispatch`)
+
+This means deploy is gated: if checks fail, deployment does not run.
+
+Required GitHub repository secrets:
+
+- `SHINYAPPS_NAME` (your shinyapps.io account name, e.g. `mspada`)
+- `SHINYAPPS_TOKEN`
+- `SHINYAPPS_SECRET`
+
+You can create token/secret from shinyapps.io account settings (`Tokens`).
+
 ## License
 
 This project is licensed under **GNU GPL v2**.
